@@ -101,7 +101,7 @@ class CareTakerEnRollView(APIView):
                 user = Users()
                 results = user.create_user(taker.firstName, taker.lastName, taker.email, taker.postalAddress,
                                            taker.phoneNumber,
-                                           'caretaker')
+                                           'ct')
                 taker.userID = Users.objects.get(userID=results['userID'])
                 taker.save()
                 return Response(data=results, status=200)
