@@ -73,7 +73,7 @@ class QuestionView(APIView):
 class CareTakersView(APIView):
     def get(self, req):
         caretakers = Caretaker.objects.all()
-        return Response(data=CareTakerSerializer(caretakers, many=True), status=200)
+        return Response(data=CareTakerSerializer(caretakers, many=True).data, status=200)
 
     def post(self, req):
         caretaker = Caretaker()

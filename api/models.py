@@ -12,7 +12,7 @@ class Caretaker(models.Model):
                                      null=True)  # Field name made lowercase.
     email = models.CharField(max_length=100, blank=True, null=True)
     enroll = models.TextField(blank=True, null=True)  # This field type is a guess.
-    userID = models.ForeignKey('Users', models.DO_NOTHING, db_column='userID', blank=True,
+    userID = models.ForeignKey('Users', models.CASCADE, db_column='userID', blank=True,
                                null=True)  # Field name made lowercase.
 
     class Meta:
@@ -35,7 +35,7 @@ class Healthcareprofessional(models.Model):
                                      null=True)  # Field name made lowercase.
     email = models.CharField(max_length=100, blank=True, null=True)
     enroll = models.TextField(blank=True, null=True)  # This field type is a guess.
-    userID = models.ForeignKey('Users', models.DO_NOTHING, db_column='userID', blank=True,
+    userID = models.ForeignKey('Users', models.CASCADE, db_column='userID', blank=True,
                                null=True)  # Field name made lowercase.
 
     class Meta:
@@ -44,7 +44,7 @@ class Healthcareprofessional(models.Model):
 
 class Requests(models.Model):
     requestID = models.IntegerField(db_column='requestID', primary_key=True)  # Field name made lowercase.
-    userID = models.ForeignKey('Users', models.DO_NOTHING, db_column='userID')  # Field name made lowercase.
+    userID = models.ForeignKey('Users', models.CASCADE, db_column='userID')  # Field name made lowercase.
     patientFirstName = models.CharField(db_column='patientFirstName', max_length=50)  # Field name made lowercase.
     patientLastName = models.CharField(db_column='patientLastName', max_length=50)  # Field name made lowercase.
     sex = models.CharField(max_length=1)
@@ -93,20 +93,20 @@ class Users(models.Model):
     postalAddress = models.CharField(db_column='postalAddress', max_length=255, blank=True,
                                      null=True)  # Field name made lowercase.
     email = models.CharField(max_length=100, blank=True, null=True)
-    roleID = models.ForeignKey(Roles, models.DO_NOTHING, db_column='roleID')  # Field name made lowercase.
+    roleID = models.ForeignKey(Roles, models.CASCADE, db_column='roleID')  # Field name made lowercase.
     username = models.CharField(db_column='userName', max_length=100)  # Field name made lowercase.
     pwd = models.CharField(max_length=32)
-    securityQuestionOneID = models.ForeignKey(Securityquestions, models.DO_NOTHING,
+    securityQuestionOneID = models.ForeignKey(Securityquestions, models.CASCADE,
                                               related_name="q1", blank=True, null=True,
                                               db_column='securityQuestionOneID')  # Field name made lowercase.
     securityQuestionOneAnswer = models.CharField(db_column='securityQuestionOneAnswer', blank=True, null=True,
                                                  max_length=30)  # Field name made lowercase.
-    securityQuestionTwoID = models.ForeignKey(Securityquestions, models.DO_NOTHING,
+    securityQuestionTwoID = models.ForeignKey(Securityquestions, models.CASCADE,
                                               related_name="q2", blank=True, null=True,
                                               db_column='securityQuestionTwoID')  # Field name made lowercase.
     securityQuestionTwoAnswer = models.CharField(db_column='securityQuestionTwoAnswer', blank=True, null=True,
                                                  max_length=30)  # Field name made lowercase.
-    securityQuestionThreeID = models.ForeignKey(Securityquestions, models.DO_NOTHING,
+    securityQuestionThreeID = models.ForeignKey(Securityquestions, models.CASCADE,
                                                 related_name="q3", blank=True, null=True,
                                                 db_column='securityQuestionThreeID')  # Field name made lowercase.
     securityQuestionThreeAnswer = models.CharField(db_column='securityQuestionThreeAnswer', blank=True, null=True,
