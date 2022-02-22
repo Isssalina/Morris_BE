@@ -76,12 +76,12 @@ class CareTakersView(APIView):
         return Response(data=CareTakerSerializer(caretakers, many=True), status=200)
 
     def post(self, req):
-        user = Caretaker()
+        caretaker = Caretaker()
         for k, v in req.data.items():
-            setattr(user, k, v)
-        user.enroll = 0
-        user.save()
-        return Response(data={}, status=200)
+            setattr(caretaker, k, v)
+        caretaker.enroll = 0
+        caretaker.save()
+        return Response(data={"takerID": caretaker.takerID}, status=200)
 
 
 class CareTakerView(APIView):

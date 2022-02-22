@@ -130,7 +130,7 @@ class Users(models.Model):
         last = Users.objects.last()
         _id = 0
         if last:
-            _id = int(Users.objects.last().userID)
+            _id = int(last.userID)
         return f"{last_name}{'0' if _id < 10 else ''}{_id}"
 
     def create_user(self, firstName, lastName, email, postalAddress, phoneNumber, role):
