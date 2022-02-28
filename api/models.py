@@ -152,7 +152,7 @@ class Users(models.Model):
 
 
 class Advertise(models.Model):
-    AdID = models.AutoField(db_column='AdID', primary_key=True)
+    adID = models.AutoField(db_column='AdID', primary_key=True)
     typeHS = models.CharField(db_column='Type_H_S', max_length=15)
     qualification = models.CharField(db_column='Qualification', max_length=10)
     yearOExp = models.IntegerField(db_column='Year_O_Exp')
