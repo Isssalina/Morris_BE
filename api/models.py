@@ -1,5 +1,6 @@
 from django.db import models
 import random
+import hashlib
 
 
 class Caretaker(models.Model):
@@ -124,7 +125,7 @@ class Users(models.Model):
         for i in range(random.randint(2, 6)):
             pwd_list.append(ch3[random.randint(0, len(ch3) - 1)])
         random.shuffle(pwd_list)
-        return "".join(pwd_list)
+        return hashlib.md5("".join(pwd_list).encode(encoding='utf-8')).hexdigest()
 
     def gen_username(self, last_name):
         last = Users.objects.last()

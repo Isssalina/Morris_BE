@@ -1,3 +1,4 @@
+import hashlib
 from rest_framework.views import APIView
 from rest_framework.views import Response
 from .models import Users, Securityquestions, Caretaker
@@ -8,6 +9,7 @@ class AuthView(APIView):
     def post(self, req):
         username = req.data.get("username", None)
         pwd = req.data.get('pwd', None)
+        pwd = hashlib.md5(pwd.encode(encoding='utf-8')).hexdigest()
         user = Users.objects.filter(username=username, pwd=pwd).first()
         if user:
             return Response(UserSerializer(user).data, status=200)
