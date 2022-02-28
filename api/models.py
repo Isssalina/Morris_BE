@@ -1,4 +1,5 @@
 from django.db import models
+from datetime import datetime
 import random
 import hashlib
 
@@ -26,10 +27,10 @@ class Healthcareprofessional(models.Model):
     lastName = models.CharField(db_column='lastName', max_length=50)  # Field name made lowercase.
     sex = models.CharField(max_length=1)
     SSN = models.DecimalField(db_column='SSN', max_digits=9, decimal_places=0)  # Field name made lowercase.
-    Type_H_S = models.CharField(db_column='Type_H_S', max_length=15)  # Field name made lowercase.
-    Qualification = models.CharField(db_column='Qualification', max_length=10)  # Field name made lowercase.
-    Qualification_Date = models.DateField(db_column='Qualification_Date')  # Field name made lowercase.
-    Year_O_Exp = models.IntegerField(db_column='Year_O_Exp')  # Field name made lowercase.
+    typeHS = models.CharField(db_column='Type_H_S', max_length=15)  # Field name made lowercase.
+    qualification = models.CharField(db_column='Qualification', max_length=10)  # Field name made lowercase.
+    qualificationDate = models.DateField(db_column='Qualification_Date', default=datetime.now)  # Field name made lowercase.
+    yearOExp = models.IntegerField(db_column='Year_O_Exp')  # Field name made lowercase.
     phoneNumber = models.DecimalField(db_column='phoneNumber', max_digits=10, decimal_places=0, blank=True,
                                       null=True)  # Field name made lowercase.
     postalAddress = models.CharField(db_column='postalAddress', max_length=255, blank=True,
@@ -152,9 +153,9 @@ class Users(models.Model):
 
 class Advertise(models.Model):
     AdID = models.AutoField(db_column='AdID', primary_key=True)
-    Type_H_S = models.CharField(db_column='Type_H_S', max_length=15)
-    Qualification = models.CharField(db_column='Qualification', max_length=10)
-    Year_O_Exp = models.IntegerField(db_column='Year_O_Exp')
+    typeHS = models.CharField(db_column='Type_H_S', max_length=15)
+    qualification = models.CharField(db_column='Qualification', max_length=10)
+    yearOExp = models.IntegerField(db_column='Year_O_Exp')
 
     class Meta:
         db_table = 'Advertise'
