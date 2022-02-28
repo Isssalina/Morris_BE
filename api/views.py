@@ -1,7 +1,7 @@
 import hashlib
 from rest_framework.views import APIView
 from rest_framework.views import Response
-from .models import Users, Securityquestions, Caretaker
+from .models import Users, Securityquestions, Caretaker, Healthcareprofessional
 from .serializers import UserSerializer, SecurityQuestionsSerializer, CareTakerSerializer
 
 
@@ -112,5 +112,7 @@ class CareTakerEnRollView(APIView):
 
 
 class HealthCareProfessionalsView(APIView):
-    def post(self):
-        pass
+    def post(self, req):
+        hcp = Healthcareprofessional()
+        for k, v in req.data.items():
+            setattr(hcp, k, v)

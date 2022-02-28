@@ -26,7 +26,7 @@ class Healthcareprofessional(models.Model):
     firstName = models.CharField(db_column='firstName', max_length=50)  # Field name made lowercase.
     lastName = models.CharField(db_column='lastName', max_length=50)  # Field name made lowercase.
     sex = models.CharField(max_length=1)
-    SSN = models.DecimalField(db_column='SSN', max_digits=9, decimal_places=0)  # Field name made lowercase.
+    ssn = models.DecimalField(db_column='SSN', max_digits=9, decimal_places=0)  # Field name made lowercase.
     typeHS = models.CharField(db_column='Type_H_S', max_length=15)  # Field name made lowercase.
     qualification = models.CharField(db_column='Qualification', max_length=10)  # Field name made lowercase.
     qualificationDate = models.DateField(db_column='Qualification_Date', default=datetime.now)  # Field name made lowercase.
