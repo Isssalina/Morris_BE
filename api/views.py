@@ -1,8 +1,9 @@
 import hashlib
 from rest_framework.views import APIView
 from rest_framework.views import Response
-from .models import Users, Securityquestions, Caretaker, Healthcareprofessional
-from .serializers import UserSerializer, SecurityQuestionsSerializer, CareTakerSerializer
+from .models import Users, Securityquestions, Caretaker, Healthcareprofessional, Advertise
+from .serializers import UserSerializer, SecurityQuestionsSerializer, CareTakerSerializer, HcpSerializer, \
+    AdvertiseSerializer
 
 
 class AuthView(APIView):
@@ -81,7 +82,7 @@ class CareTakersView(APIView):
         caretaker = Caretaker()
         for k, v in req.data.items():
             setattr(caretaker, k, v)
-        caretaker.enroll = 0
+        caretaker.enroll = False
         caretaker.save()
         return Response(data={"takerID": caretaker.takerID}, status=200)
 
@@ -99,7 +100,7 @@ class CareTakerEnRollView(APIView):
         taker = Caretaker.objects.filter(takerID=int(takerID)).first()
         if taker:
             if int(taker.enroll) != 1:
-                taker.enroll = 1
+                taker.enroll = True
                 user = Users()
                 results = user.create_user(taker.firstName, taker.lastName, taker.email, taker.postalAddress,
                                            taker.phoneNumber,
@@ -112,7 +113,52 @@ class CareTakerEnRollView(APIView):
 
 
 class HealthCareProfessionalsView(APIView):
+    def get(self, req):
+        hcp = Healthcareprofessional.objects.all()
+        return Response(data=HcpSerializer(hcp, many=True).data, status=200)
+
     def post(self, req):
         hcp = Healthcareprofessional()
         for k, v in req.data.items():
             setattr(hcp, k, v)
+        hcp.enroll = False
+        hcp.save()
+
+
+class HealthCareProfessionalView(APIView):
+
+    def get(self, req, pk):
+        hcp = Healthcareprofessional.objects.filter(pID=int(pk)).first()
+        if hcp:
+            return Response(HcpSerializer(hcp).data, status=200)
+        return Response(data={'error': "Applicant does not exist"}, status=404)
+
+    def delete(self, req, pk):
+        hcp = Healthcareprofessional.objects.filter(pID=int(pk)).first()
+        if hcp:
+            hcp.delete()
+            return Response({})
+        return Response(data={'error': "Applicant does not exist"}, status=404)
+
+
+class ApplicationsView(APIView):
+    def post(self, req):
+        application = Advertise()
+        for k, v in req.data.items():
+            setattr(application, k, v)
+        application.save()
+
+
+class ApplicationView(APIView):
+    def get(self, req, pk):
+        application = Advertise.objects.filter(adID=int(pk)).first()
+        if application:
+            return Response(AdvertiseSerializer(application).data, status=200)
+        return Response(data={'error': "Application does not exist"}, status=404)
+
+    def delete(self, req, pk):
+        application = Advertise.objects.filter(adID=int(pk)).first()
+        if application:
+            application.delete()
+            return Response({})
+        return Response(data={'error': "User does not exist"}, status=404)

@@ -22,7 +22,7 @@ class Caretaker(models.Model):
 
 
 class Healthcareprofessional(models.Model):
-    pid = models.IntegerField(db_column='PID', primary_key=True)  # Field name made lowercase.
+    pID = models.IntegerField(db_column='PID', primary_key=True)  # Field name made lowercase.
     firstName = models.CharField(db_column='firstName', max_length=50)  # Field name made lowercase.
     lastName = models.CharField(db_column='lastName', max_length=50)  # Field name made lowercase.
     sex = models.CharField(max_length=1)
