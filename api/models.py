@@ -148,3 +148,13 @@ class Users(models.Model):
 
     class Meta:
         db_table = 'Users'
+
+
+class Advertise(models.Model):
+    AdID = models.AutoField(db_column='AdID', primary_key=True)
+    Type_H_S = models.CharField(db_column='Type_H_S', max_length=15)
+    Qualification = models.CharField(db_column='Qualification', max_length=10)
+    Year_O_Exp = models.IntegerField(db_column='Year_O_Exp')
+
+    class Meta:
+        db_table = 'Advertise'
