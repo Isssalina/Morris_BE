@@ -12,9 +12,9 @@ class Caretaker(models.Model):
     postalAddress = models.CharField(db_column='postalAddress', max_length=255, blank=True,
                                      null=True)  # Field name made lowercase.
     email = models.CharField(max_length=100, blank=True, null=True)
-    enroll = models.TextField(blank=True, null=True)  # This field type is a guess.
+    enroll = models.BooleanField(blank=True, null=True, default=False)
     userID = models.ForeignKey('Users', models.CASCADE, db_column='userID', blank=True,
-                               null=True)  # Field name made lowercase.
+                               null=True)
 
     class Meta:
         db_table = 'CareTaker'
@@ -35,7 +35,7 @@ class Healthcareprofessional(models.Model):
     postalAddress = models.CharField(db_column='postalAddress', max_length=255, blank=True,
                                      null=True)  # Field name made lowercase.
     email = models.CharField(max_length=100, blank=True, null=True)
-    enroll = models.TextField(blank=True, null=True)  # This field type is a guess.
+    enroll = models.BooleanField(blank=True, null=True, default=False)
     userID = models.ForeignKey('Users', models.CASCADE, db_column='userID', blank=True,
                                null=True)  # Field name made lowercase.
 

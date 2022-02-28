@@ -109,3 +109,8 @@ class CareTakerEnRollView(APIView):
                 return Response(data=results, status=200)
             return Response(data={'error': "The current caretaker has been enlisted"}, status=400)
         return Response(data={'error': "Caretaker does not exist"}, status=404)
+
+
+class HealthCareProfessionalsView(APIView):
+    def post(self):
+        pass

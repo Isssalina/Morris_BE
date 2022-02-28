@@ -5,7 +5,7 @@ from .models import Users, Securityquestions, Caretaker
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = Users
-        fields = "__all__"
+        fields = ['userID', 'firstName', 'lastName', 'phoneNumber', 'postalAddress', 'email', 'roleID', 'username']
 
 
 class UserQuestionSerializer(serializers.ModelSerializer):
