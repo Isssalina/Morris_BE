@@ -99,7 +99,7 @@ class CareTakerEnRollView(APIView):
     def post(self, req, takerID):
         taker = Caretaker.objects.filter(takerID=int(takerID)).first()
         if taker:
-            if int(taker.enroll) != 1:
+            if not taker.enroll:
                 taker.enroll = True
                 user = Users()
                 results = user.create_user(taker.firstName, taker.lastName, taker.email, taker.postalAddress,
@@ -113,20 +113,24 @@ class CareTakerEnRollView(APIView):
 
 
 class HealthCareProfessionalsView(APIView):
-    def get(self, req):
-        hcp = Healthcareprofessional.objects.all()
+    def get(self, req, appID):
+        hcp = Healthcareprofessional.objects.filter(advertiseID__adID=int(appID), enroll=False)
         return Response(data=HcpSerializer(hcp, many=True).data, status=200)
 
-    def post(self, req):
+    def post(self, req, appID):
+        ad = Advertise.objects.get(adID=int(appID))
+        if Healthcareprofessional.objects.filter(email=req.data.get('email', None), advertiseID=ad):
+            return Response({"error": "You have applied for this position. You can't apply for it again"}, status=400)
         hcp = Healthcareprofessional()
         for k, v in req.data.items():
             setattr(hcp, k, v)
+        hcp.advertiseID = ad
         hcp.enroll = False
         hcp.save()
+        return Response({}, status=200)
 
 
 class HealthCareProfessionalView(APIView):
-
     def get(self, req, pk):
         hcp = Healthcareprofessional.objects.filter(pID=int(pk)).first()
         if hcp:
@@ -142,11 +146,19 @@ class HealthCareProfessionalView(APIView):
 
 
 class ApplicationsView(APIView):
+    def get(self, req):
+        typeHS = req.query_params.get("type", None)
+        applications = Advertise.objects.all()
+        if typeHS:
+            applications = applications.filter(typeHS=typeHS)
+        return Response(AdvertiseSerializer(applications, many=True).data, status=200)
+
     def post(self, req):
         application = Advertise()
         for k, v in req.data.items():
             setattr(application, k, v)
         application.save()
+        return Response({}, status=200)
 
 
 class ApplicationView(APIView):
@@ -162,3 +174,25 @@ class ApplicationView(APIView):
             application.delete()
             return Response({})
         return Response(data={'error': "User does not exist"}, status=404)
+
+
+class HcpEnrollView(APIView):
+    # approve
+    def post(self, req, pID):
+        hcp = Healthcareprofessional.objects.filter(pID=int(pID)).first()
+        if hcp:
+            if not hcp.enroll:
+                hcp.enroll = True
+                user = Users()
+                results = user.create_user(hcp.firstName, hcp.lastName, hcp.email, hcp.postalAddress,
+                                           hcp.phoneNumber,
+                                           'hcp')
+                hcp.userID = Users.objects.get(userID=results['userID'])
+                hcp.save()
+                return Response(data=results, status=200)
+            return Response(data={'error': "The current hcp has been enlisted"}, status=400)
+        return Response(data={'error': "Hcp does not exist"}, status=404)
+
+    # deny
+    def delete(self, req, pID):
+        pass

@@ -29,7 +29,8 @@ class Healthcareprofessional(models.Model):
     ssn = models.DecimalField(db_column='SSN', max_digits=9, decimal_places=0)  # Field name made lowercase.
     typeHS = models.CharField(db_column='Type_H_S', max_length=15)  # Field name made lowercase.
     qualification = models.CharField(db_column='Qualification', max_length=10)  # Field name made lowercase.
-    qualificationDate = models.DateField(db_column='Qualification_Date', default=datetime.now)  # Field name made lowercase.
+    qualificationDate = models.DateField(db_column='Qualification_Date',
+                                         default=datetime.now)  # Field name made lowercase.
     yearOExp = models.IntegerField(db_column='Year_O_Exp')  # Field name made lowercase.
     phoneNumber = models.DecimalField(db_column='phoneNumber', max_digits=10, decimal_places=0, blank=True,
                                       null=True)  # Field name made lowercase.
@@ -37,6 +38,8 @@ class Healthcareprofessional(models.Model):
                                      null=True)  # Field name made lowercase.
     email = models.CharField(max_length=100, blank=True, null=True)
     enroll = models.BooleanField(blank=True, null=True, default=False)
+    advertiseID = models.ForeignKey('Advertise', models.CASCADE, db_column='advertiseID', blank=True,
+                                    null=True)  # Field name made lowercase.
     userID = models.ForeignKey('Users', models.CASCADE, db_column='userID', blank=True,
                                null=True)  # Field name made lowercase.
 
@@ -155,6 +158,7 @@ class Advertise(models.Model):
     adID = models.AutoField(db_column='AdID', primary_key=True)
     typeHS = models.CharField(db_column='Type_H_S', max_length=15)
     qualification = models.CharField(db_column='Qualification', max_length=10)
+    education = models.CharField(db_column='education', max_length=100,default="")
     yearOExp = models.IntegerField(db_column='Year_O_Exp')
 
     class Meta:

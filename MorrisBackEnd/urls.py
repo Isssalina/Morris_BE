@@ -9,7 +9,7 @@ urlpatterns = [
     re_path('^api/caretaker/(.*?)/$', views.CareTakerView.as_view()),
     re_path('^api/caretaker_enroll/(.*?)/$', views.CareTakerEnRollView.as_view()),
     path('api/questions/', views.QuestionListView.as_view()),
-    path('api/applicants/', views.HealthCareProfessionalsView.as_view()),
+    re_path('^api/applicants/(.*?)/$', views.HealthCareProfessionalsView.as_view()),
     re_path('^api/applicant/(.*?)/$', views.HealthCareProfessionalView.as_view()),
     path('api/applications/', views.ApplicationsView.as_view()),
     re_path('^api/application/(.*?)/$', views.ApplicationView.as_view()),
