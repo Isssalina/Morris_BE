@@ -13,6 +13,8 @@ urlpatterns = [
     re_path('^api/applicant/(.*?)/$', views.HealthCareProfessionalView.as_view()),
     path('api/applications/', views.ApplicationsView.as_view()),
     re_path('^api/application/(.*?)/$', views.ApplicationView.as_view()),
+    path('api/hcp/approve/', views.HcpApproveView.as_view()),
+    path('api/hcp/deny/', views.HcpApproveView.as_view()),
     re_path('^api/question/(.*?)/$', views.QuestionView.as_view()),
     re_path('^api/user/(.*?)/$', views.UserView.as_view()),
     path('admin/', admin.site.urls),
