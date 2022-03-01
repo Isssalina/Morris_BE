@@ -1,11 +1,16 @@
 from rest_framework import serializers
-from .models import Users, Securityquestions, Caretaker, Healthcareprofessional, Advertise
+from .models import Users, Securityquestions, Caretaker, Healthcareprofessional, Advertise, Roles
 
 
 class UserSerializer(serializers.ModelSerializer):
+    role = serializers.SerializerMethodField()
+
+    def get_role(self, obj):
+        return obj.roleID.roleName
+
     class Meta:
         model = Users
-        fields = ['userID', 'firstName', 'lastName', 'phoneNumber', 'postalAddress', 'email', 'roleID', 'username']
+        fields = ['userID', 'username', 'firstName', 'lastName', 'phoneNumber', 'postalAddress', 'email', 'role']
 
 
 class UserQuestionSerializer(serializers.ModelSerializer):

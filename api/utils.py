@@ -9,8 +9,8 @@ def sent_email(receiver, username, password):
     pwd = 'LKELETHVEIEPFWXZ'
     body = f"""<h1>Welcome to Hiring Agency!</h1>
 Your account information is as follows:<br>
-<strong>Username: {username}</strong><br>
-<strong>Password: {password}</strong>
+Username: <strong>{username}</strong><br>
+Password: <strong>{password}</strong>
 """
     # 设置邮件正文，这里是支持HTML的
     msg = MIMEText(body, 'html')

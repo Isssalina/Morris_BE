@@ -2,6 +2,7 @@ from django.db import models
 from datetime import datetime
 import random
 import hashlib
+from .utils import sent_email
 
 
 class Caretaker(models.Model):
@@ -129,7 +130,7 @@ class Users(models.Model):
         for i in range(random.randint(2, 6)):
             pwd_list.append(ch3[random.randint(0, len(ch3) - 1)])
         random.shuffle(pwd_list)
-        return hashlib.md5("".join(pwd_list).encode(encoding='utf-8')).hexdigest()
+        return "".join(pwd_list)
 
     def gen_username(self, last_name):
         last = Users.objects.last()
@@ -146,9 +147,11 @@ class Users(models.Model):
         self.phoneNumber = phoneNumber
         self.roleID = Roles.objects.get(roleName=role)
         self.username = self.gen_username(lastName)
-        self.pwd = self.gen_password()
+        raw_pwd = self.gen_password()
+        self.pwd = hashlib.md5(raw_pwd.encode(encoding='utf-8')).hexdigest()
         self.save()
-        return {'username': self.username, "pwd": self.pwd, 'userID': self.userID}
+        sent_email(self.email, self.username, raw_pwd)
+        return {'userID': self.userID}
 
     class Meta:
         db_table = 'Users'
@@ -158,7 +161,7 @@ class Advertise(models.Model):
     adID = models.AutoField(db_column='AdID', primary_key=True)
     typeHS = models.CharField(db_column='Type_H_S', max_length=15)
     qualification = models.CharField(db_column='Qualification', max_length=10)
-    education = models.CharField(db_column='education', max_length=100,default="")
+    education = models.CharField(db_column='education', max_length=100, default="")
     yearOExp = models.IntegerField(db_column='Year_O_Exp')
 
     class Meta:
