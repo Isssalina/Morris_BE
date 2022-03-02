@@ -163,6 +163,11 @@ class Advertise(models.Model):
     qualification = models.CharField(db_column='Qualification', max_length=10)
     education = models.CharField(db_column='education', max_length=100, default="")
     yearOExp = models.IntegerField(db_column='Year_O_Exp')
+    assigned = models.BooleanField(default=False)
+
+    def do_assign(self):
+        self.assigned = True
+        self.save()
 
     class Meta:
         db_table = 'Advertise'

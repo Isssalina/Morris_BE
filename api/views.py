@@ -158,7 +158,7 @@ class ApplicationsView(APIView):
         for k, v in req.data.items():
             setattr(application, k, v)
         application.save()
-        return Response({"adID":application.adID}, status=200)
+        return Response({"adID": application.adID}, status=200)
 
 
 class ApplicationView(APIView):
@@ -180,9 +180,8 @@ class HcpApproveView(APIView):
     # approve
     def post(self, req):
         pID = req.data.get("pID", None)
-        adID = req.data.get("adID", None)
         hcp = Healthcareprofessional.objects.filter(pID=int(pID)).first()
-        ad = Advertise.objects.filter(adID=int(adID)).first()
+        ad = hcp.advertiseID
         if hcp and ad:
             if not hcp.enroll:
                 hcp.enroll = True
@@ -193,7 +192,7 @@ class HcpApproveView(APIView):
                 hcp.userID = Users.objects.get(userID=results['userID'])
                 hcp.save()
                 ad.delete()
-                for hcp in Healthcareprofessional.objects.filter(advertiseID__adID=int(adID)):
+                for hcp in Healthcareprofessional.objects.filter(advertiseID=ad):
                     if int(hcp.pID) != int(pID):
                         hcp.delete()
                 return Response(data=results, status=200)
