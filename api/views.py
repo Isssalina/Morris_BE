@@ -158,7 +158,7 @@ class ApplicationsView(APIView):
         for k, v in req.data.items():
             setattr(application, k, v)
         application.save()
-        return Response({}, status=200)
+        return Response({"adID":application.adID}, status=200)
 
 
 class ApplicationView(APIView):
