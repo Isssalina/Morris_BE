@@ -6,7 +6,6 @@ click==8.0.
 Django==3.2.12
 djangorestframework==3.13.1
 djangorestframework-jwt==1.11.0
-djangorestframework-simplejwt==5.0.0
 idna==3.3
 importlib-metadata==4.11.1
 inflection==0.5.1
