@@ -17,7 +17,10 @@ class Caretaker(models.Model):
     enroll = models.BooleanField(blank=True, null=True, default=False)
     userID = models.ForeignKey('Users', models.CASCADE, db_column='userID', blank=True,
                                null=True)
-
+    deleted = models.BooleanField(default=False)
+    def remove(self):
+        self.deleted = True
+        self.save()
     class Meta:
         db_table = 'CareTaker'
 
@@ -43,7 +46,10 @@ class Healthcareprofessional(models.Model):
                                     null=True)  # Field name made lowercase.
     userID = models.ForeignKey('Users', models.CASCADE, db_column='userID', blank=True,
                                null=True)  # Field name made lowercase.
-
+    deleted = models.BooleanField(default=False)
+    def remove(self):
+        self.deleted = True
+        self.save()
     class Meta:
         db_table = 'HealthcareProfessional'
 
@@ -66,7 +72,10 @@ class Requests(models.Model):
     endTime = models.TimeField(db_column='endTime', blank=True, null=True)  # Field name made lowercase.
     numDaysRequested = models.IntegerField(db_column='numDaysRequested', blank=True,
                                            null=True)  # Field name made lowercase.
-
+    deleted = models.BooleanField(default=False)
+    def remove(self):
+        self.deleted = True
+        self.save()
     class Meta:
         db_table = 'Requests'
 
@@ -74,7 +83,10 @@ class Requests(models.Model):
 class Roles(models.Model):
     roleID = models.AutoField(db_column='roleID', primary_key=True)  # Field name made lowercase.
     roleName = models.CharField(db_column='roleName', max_length=30)  # Field name made lowercase.
-
+    deleted = models.BooleanField(default=False)
+    def remove(self):
+        self.deleted = True
+        self.save()
     class Meta:
         db_table = 'Roles'
 
@@ -83,6 +95,11 @@ class Securityquestions(models.Model):
     securityQuestionID = models.AutoField(db_column='securityQuestionID',
                                           primary_key=True)  # Field name made lowercase.
     question = models.CharField(max_length=255)
+    deleted = models.BooleanField(default=False)
+
+    def remove(self):
+        self.deleted = True
+        self.save()
 
     class Meta:
         db_table = 'SecurityQuestions'
@@ -117,6 +134,7 @@ class Users(models.Model):
                                                 db_column='securityQuestionThreeID')  # Field name made lowercase.
     securityQuestionThreeAnswer = models.CharField(db_column='securityQuestionThreeAnswer', blank=True, null=True,
                                                    max_length=30)  # Field name made lowercase.
+    deleted = models.BooleanField(default=False)
 
     def gen_password(self):
         ch1 = "~!@#$%ˆ&*+"
@@ -153,6 +171,10 @@ class Users(models.Model):
         sent_email(self.email, self.username, raw_pwd)
         return {'userID': self.userID}
 
+    def remove(self):
+        self.deleted = True
+        self.save()
+
     class Meta:
         db_table = 'Users'
 
@@ -163,10 +185,10 @@ class Advertise(models.Model):
     qualification = models.CharField(db_column='Qualification', max_length=10)
     education = models.CharField(db_column='education', max_length=100, default="")
     yearOExp = models.IntegerField(db_column='Year_O_Exp')
-    assigned = models.BooleanField(default=False)
+    deleted = models.BooleanField(default=False)
 
-    def do_assign(self):
-        self.assigned = True
+    def remove(self):
+        self.deleted = True
         self.save()
 
     class Meta:

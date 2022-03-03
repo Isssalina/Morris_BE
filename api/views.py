@@ -11,7 +11,7 @@ class AuthView(APIView):
         username = req.data.get("username", None)
         pwd = req.data.get('pwd', None)
         pwd = hashlib.md5(pwd.encode(encoding='utf-8')).hexdigest()
-        user = Users.objects.filter(username=username, pwd=pwd).first()
+        user = Users.objects.filter(username=username, pwd=pwd,deleted=False).first()
         if user:
             return Response(UserSerializer(user).data, status=200)
         return Response(data={'error': "User does not exist"}, status=404)
@@ -30,13 +30,13 @@ class UserListView(APIView):
 
 class UserView(APIView):
     def get(self, req, pk):
-        user = Users.objects.filter(userID=int(pk)).first()
+        user = Users.objects.filter(userID=int(pk),deleted=False).first()
         if user:
             return Response(UserSerializer(user).data, status=200)
         return Response(data={'error': "User does not exist"}, status=404)
 
     def put(self, req, pk):
-        user = Users.objects.filter(userID=int(pk)).first()
+        user = Users.objects.filter(userID=int(pk),deleted=False).first()
         if user:
             for k, v in req.data.items():
                 if k in ['securityQuestionOneID', 'securityQuestionTwoID', 'securityQuestionThreeID']:
@@ -47,9 +47,9 @@ class UserView(APIView):
         return Response(data={'error': "User does not exist"}, status=404)
 
     def delete(self, req, pk):
-        user = Users.objects.filter(userID=int(pk)).first()
+        user = Users.objects.filter(userID=int(pk),deleted=False).first()
         if user:
-            user.delete()
+            user.remove()
             return Response({})
         return Response(data={'error': "User does not exist"}, status=404)
 
@@ -62,7 +62,7 @@ class QuestionListView(APIView):
 
 class QuestionView(APIView):
     def get(self, req, userID):
-        user = Users.objects.filter(userID=int(userID)).first()
+        user = Users.objects.filter(userID=int(userID),deleted=False).first()
         if user:
             data = {
                 'questionOne': SecurityQuestionsSerializer(user.securityQuestionOneID).data,
@@ -89,7 +89,7 @@ class CareTakersView(APIView):
 
 class CareTakerView(APIView):
     def get(self, req, pk):
-        caretaker = Caretaker.objects.filter(takerID=int(pk)).first()
+        caretaker = Caretaker.objects.filter(takerID=int(pk),deleted=False).first()
         if caretaker:
             return Response(CareTakerSerializer(caretaker).data, status=200)
         return Response(data={'error': "Caretaker does not exist"}, status=404)
@@ -97,7 +97,7 @@ class CareTakerView(APIView):
 
 class CareTakerEnRollView(APIView):
     def post(self, req, takerID):
-        taker = Caretaker.objects.filter(takerID=int(takerID)).first()
+        taker = Caretaker.objects.filter(takerID=int(takerID),deleted=False).first()
         if taker:
             if not taker.enroll:
                 taker.enroll = True
@@ -114,12 +114,12 @@ class CareTakerEnRollView(APIView):
 
 class HealthCareProfessionalsView(APIView):
     def get(self, req, appID):
-        hcp = Healthcareprofessional.objects.filter(advertiseID__adID=int(appID), enroll=False)
+        hcp = Healthcareprofessional.objects.filter(advertiseID__adID=int(appID), enroll=False,deleted=False)
         return Response(data=HcpSerializer(hcp, many=True).data, status=200)
 
     def post(self, req, appID):
         ad = Advertise.objects.get(adID=int(appID))
-        if Healthcareprofessional.objects.filter(email=req.data.get('email', None), advertiseID=ad):
+        if Healthcareprofessional.objects.filter(email=req.data.get('email', None), advertiseID=ad,deleted=False):
             return Response({"error": "You have applied for this position. You can't apply for it again"}, status=400)
         hcp = Healthcareprofessional()
         for k, v in req.data.items():
@@ -132,15 +132,15 @@ class HealthCareProfessionalsView(APIView):
 
 class HealthCareProfessionalView(APIView):
     def get(self, req, pk):
-        hcp = Healthcareprofessional.objects.filter(pID=int(pk)).first()
+        hcp = Healthcareprofessional.objects.filter(pID=int(pk),deleted=False).first()
         if hcp:
             return Response(HcpSerializer(hcp).data, status=200)
         return Response(data={'error': "Applicant does not exist"}, status=404)
 
     def delete(self, req, pk):
-        hcp = Healthcareprofessional.objects.filter(pID=int(pk)).first()
+        hcp = Healthcareprofessional.objects.filter(pID=int(pk),deleted=False).first()
         if hcp:
-            hcp.delete()
+            hcp.remove()
             return Response({})
         return Response(data={'error': "Applicant does not exist"}, status=404)
 
@@ -150,7 +150,7 @@ class ApplicationsView(APIView):
         typeHS = req.query_params.get("type", None)
         applications = Advertise.objects.all()
         if typeHS:
-            applications = applications.filter(typeHS=typeHS)
+            applications = applications.filter(typeHS=typeHS,deleted=False)
         return Response(AdvertiseSerializer(applications, many=True).data, status=200)
 
     def post(self, req):
@@ -163,15 +163,15 @@ class ApplicationsView(APIView):
 
 class ApplicationView(APIView):
     def get(self, req, pk):
-        application = Advertise.objects.filter(adID=int(pk)).first()
+        application = Advertise.objects.filter(adID=int(pk),deleted=False).first()
         if application:
             return Response(AdvertiseSerializer(application).data, status=200)
         return Response(data={'error': "Application does not exist"}, status=404)
 
     def delete(self, req, pk):
-        application = Advertise.objects.filter(adID=int(pk)).first()
+        application = Advertise.objects.filter(adID=int(pk),deleted=False).first()
         if application:
-            application.delete()
+            application.remove()
             return Response({})
         return Response(data={'error': "User does not exist"}, status=404)
 
@@ -180,7 +180,7 @@ class HcpApproveView(APIView):
     # approve
     def post(self, req):
         pID = req.data.get("pID", None)
-        hcp = Healthcareprofessional.objects.filter(pID=int(pID)).first()
+        hcp = Healthcareprofessional.objects.filter(pID=int(pID),deleted=False).first()
         ad = hcp.advertiseID
         if hcp and ad:
             if not hcp.enroll:
@@ -191,10 +191,10 @@ class HcpApproveView(APIView):
                                            'hcp')
                 hcp.userID = Users.objects.get(userID=results['userID'])
                 hcp.save()
-                ad.delete()
-                for hcp in Healthcareprofessional.objects.filter(advertiseID=ad):
+                ad.remove()
+                for hcp in Healthcareprofessional.objects.filter(advertiseID=ad,deleted=False):
                     if int(hcp.pID) != int(pID):
-                        hcp.delete()
+                        hcp.remove()
                 return Response(data=results, status=200)
             return Response(data={'error': "The current hcp has been enlisted"}, status=400)
         return Response(data={'error': "Application or applicant  does not exist"}, status=404)
@@ -204,6 +204,6 @@ class HcpDenyView(APIView):
     # deny
     def post(self, req):
         pID = req.data.get("pID", None)
-        hcp = Healthcareprofessional.objects.filter(pID=int(pID)).first()
-        hcp.delete()
+        hcp = Healthcareprofessional.objects.filter(pID=int(pID),deleted=False).first()
+        hcp.remove()
         return Response(data={}, status=200)
