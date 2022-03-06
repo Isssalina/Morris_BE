@@ -65,9 +65,15 @@ class QuestionView(APIView):
         user = Users.objects.filter(userID=int(userID), deleted=False).first()
         if user:
             data = {
-                'questionOne': SecurityQuestionsSerializer(user.securityQuestionOneID).data,
-                'questionTwo': SecurityQuestionsSerializer(user.securityQuestionTwoID).data,
-                'questionThree': SecurityQuestionsSerializer(user.securityQuestionThreeID).data,
+                'securityQuestionOneID': user.securityQuestionOneID.securityQuestionID if user.securityQuestionOneID else None,
+                'securityQuestionOne': user.securityQuestionOneID.question if user.securityQuestionOneID else None,
+                'questionOneAnswer': user.securityQuestionOneAnswer,
+                'securityQuestionTwoID': user.securityQuestionTwoID.securityQuestionID if user.securityQuestionTwoID else None,
+                'securityQuestionTwo': user.securityQuestionTwoID.question if user.securityQuestionTwoID else None,
+                'questionTwoAnswer': user.securityQuestionTwoAnswer,
+                'securityQuestionThreeID': user.securityQuestionThreeID.securityQuestionID if user.securityQuestionThreeID else None,
+                'securityQuestionThree': user.securityQuestionThreeID.question if user.securityQuestionThreeID else None,
+                'questionThreeAnswer': user.securityQuestionThreeAnswer,
             }
             return Response(data=data, status=200)
         return Response(data={'error': "User does not exist"}, status=404)
