@@ -10,7 +10,10 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Users
-        fields = ['userID', 'username', 'firstName', 'lastName', 'phoneNumber', 'postalAddress', 'email', 'role']
+        fields = ['userID', 'username', 'firstName', 'lastName', 'phoneNumber', 'postalAddress', 'email', 'role',
+                  'securityQuestionOneID', 'securityQuestionTwoID', 'securityQuestionThreeID',
+                  'securityQuestionOneAnswer', 'securityQuestionTwoAnswer', 'securityQuestionThreeAnswer'
+                  ]
 
 
 class UserQuestionSerializer(serializers.ModelSerializer):
