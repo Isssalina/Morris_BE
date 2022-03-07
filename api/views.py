@@ -193,7 +193,7 @@ class HcpApproveView(APIView):
     def get(self, req, pID):
         hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
         ad = hcp.advertiseID
-        if hcp:
+        if hcp and ad:
             if not hcp.enroll:
                 hcp.enroll = True
                 user = Users()
@@ -208,7 +208,7 @@ class HcpApproveView(APIView):
                         hcp.remove()
                 return Response(data=results, status=200)
             return Response(data={'error': "The current hcp has been enlisted"}, status=400)
-        return Response(data={'error': "Application or applicant  does not exist"}, status=404)
+        return Response(data={'error': "Application or applicant does not exist"}, status=404)
 
 
 class HcpDenyView(APIView):
