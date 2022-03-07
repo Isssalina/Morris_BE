@@ -41,6 +41,9 @@ class UserView(APIView):
             for k, v in req.data.items():
                 if k in ['securityQuestionOneID', 'securityQuestionTwoID', 'securityQuestionThreeID']:
                     v = Securityquestions.objects.get(securityQuestionID=int(v))
+                if k == "pwd":
+                    v = hashlib.md5(v.encode(encoding='utf-8')).hexdigest()
+                    setattr(user, k, v)
                 setattr(user, k, v)
             user.save()
             return Response({}, status=200)
