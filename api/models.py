@@ -18,9 +18,11 @@ class Caretaker(models.Model):
     userID = models.ForeignKey('Users', models.CASCADE, db_column='userID', blank=True,
                                null=True)
     deleted = models.BooleanField(default=False)
+
     def remove(self):
         self.deleted = True
         self.save()
+
     class Meta:
         db_table = 'CareTaker'
 
@@ -47,9 +49,11 @@ class Healthcareprofessional(models.Model):
     userID = models.ForeignKey('Users', models.CASCADE, db_column='userID', blank=True,
                                null=True)  # Field name made lowercase.
     deleted = models.BooleanField(default=False)
+
     def remove(self):
         self.deleted = True
         self.save()
+
     class Meta:
         db_table = 'HealthcareProfessional'
 
@@ -73,9 +77,11 @@ class Requests(models.Model):
     numDaysRequested = models.IntegerField(db_column='numDaysRequested', blank=True,
                                            null=True)  # Field name made lowercase.
     deleted = models.BooleanField(default=False)
+
     def remove(self):
         self.deleted = True
         self.save()
+
     class Meta:
         db_table = 'Requests'
 
@@ -84,9 +90,11 @@ class Roles(models.Model):
     roleID = models.AutoField(db_column='roleID', primary_key=True)  # Field name made lowercase.
     roleName = models.CharField(db_column='roleName', max_length=30)  # Field name made lowercase.
     deleted = models.BooleanField(default=False)
+
     def remove(self):
         self.deleted = True
         self.save()
+
     class Meta:
         db_table = 'Roles'
 
