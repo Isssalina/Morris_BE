@@ -1,9 +1,9 @@
 import hashlib
 from rest_framework.views import APIView
 from rest_framework.views import Response
-from .models import Users, Securityquestions, Caretaker, Healthcareprofessional, Advertise
+from .models import Users, Securityquestions, Caretaker, Healthcareprofessional, Advertise, Requests
 from .serializers import UserSerializer, SecurityQuestionsSerializer, CareTakerSerializer, HcpSerializer, \
-    AdvertiseSerializer
+    AdvertiseSerializer, RequestsSerializer
 
 
 class AuthView(APIView):
@@ -156,6 +156,18 @@ class HealthCareProfessionalView(APIView):
             return Response({})
         return Response(data={'error': "Applicant does not exist"}, status=404)
 
+    def put(self, req, pk):
+        """
+        todo:add salary
+        """
+        hcp = Healthcareprofessional.objects.filter(pID=int(pk), deleted=False).first()
+        if hcp:
+            for k, v in req.data.items():
+                setattr(hcp, k, v)
+            hcp.save()
+            return Response({})
+        return Response(data={'error': "Applicant does not exist"}, status=404)
+
 
 class ApplicationsView(APIView):
     def get(self, req):
@@ -219,4 +231,53 @@ class HcpDenyView(APIView):
             hcp.remove()
             return Response(data={}, status=200)
         else:
-            return Response(data={'Applicant does not exist'}, status=400)
+            return Response(data={'error': 'Applicant does not exist'}, status=404)
+
+
+class RequestsView(APIView):
+    def get(self, req):
+        requests = Requests.objects.filter(deleted=False)
+        return Response(RequestsSerializer(requests, many=True).data, status=200)
+
+    def post(self, req):
+        h_request = Requests()
+        for k, v in req.data.items():
+            if k == "takerID":
+                v = Caretaker.objects.filter(takerID=int(v), deleted=False).first()
+                if not v:
+                    return Response({"error": "caretaker does not exist"}, status=200)
+            setattr(h_request, k, v)
+        h_request.save()
+        # todo:something wrong with requestID
+        return Response({"requestID": Requests.objects.last().requestID}, status=200)
+
+
+class RequestView(APIView):
+    def get(self, req, pk):
+        _requests = Requests.objects.filter(requestID=int(pk), deleted=False).first()
+        if _requests:
+            return Response(RequestsSerializer(_requests).data, status=200)
+        else:
+            return Response({'error': 'Requests does not exist'}, status=404)
+
+    def delete(self, req, pk):
+        _requests = Requests.objects.filter(requestID=int(pk), deleted=False).first()
+        if _requests:
+            _requests.remove()
+            return Response({}, status=200)
+        else:
+            return Response({'error': 'Requests does not exist'}, status=404)
+
+
+class AssignRequestView(APIView):
+    def post(self, req):
+        requestID = req.data.get("requestID")
+        pID = req.data.get('pID')
+        _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
+        hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
+        if _requests and hcp:
+            _requests.userID = hcp
+            _requests.save()
+            return Response({}, status=200)
+        else:
+            return Response({'error': 'Requests or Hcp or caretaker does not exist'}, status=404)

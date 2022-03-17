@@ -18,5 +18,8 @@ urlpatterns = [
     re_path('^api/deny/(.*?)/$', views.HcpDenyView.as_view()),
     re_path('^api/question/(.*?)/$', views.QuestionView.as_view()),
     re_path('^api/user/(.*?)/$', views.UserView.as_view()),
+    path('api/requests/', views.RequestsView.as_view()),
+    re_path('^api/request/(.*?)/$', views.RequestView.as_view()),
+    path('api/assign/', views.AssignRequestView.as_view()),
     path('admin/', admin.site.urls),
 ]

@@ -33,6 +33,7 @@ class Healthcareprofessional(models.Model):
     lastName = models.CharField(db_column='lastName', max_length=50)  # Field name made lowercase.
     sex = models.CharField(max_length=1)
     ssn = models.DecimalField(db_column='SSN', max_digits=9, decimal_places=0)  # Field name made lowercase.
+    salary = models.FloatField(default=0)
     typeHS = models.CharField(db_column='Type_H_S', max_length=15)  # Field name made lowercase.
     qualification = models.CharField(db_column='Qualification', max_length=10)  # Field name made lowercase.
     qualificationDate = models.DateField(db_column='Qualification_Date',
@@ -60,7 +61,10 @@ class Healthcareprofessional(models.Model):
 
 class Requests(models.Model):
     requestID = models.IntegerField(db_column='requestID', primary_key=True)  # Field name made lowercase.
-    userID = models.ForeignKey('Users', models.CASCADE, db_column='userID')  # Field name made lowercase.
+    userID = models.ForeignKey(Healthcareprofessional, models.CASCADE, db_column='userID', null=True,
+                               blank=True)  # Field name made lowercase.
+    takerID = models.ForeignKey(Caretaker, models.CASCADE, null=True,
+                                blank=True)  # Field name made lowercase.
     patientFirstName = models.CharField(db_column='patientFirstName', max_length=50)  # Field name made lowercase.
     patientLastName = models.CharField(db_column='patientLastName', max_length=50)  # Field name made lowercase.
     sex = models.CharField(max_length=1)
@@ -72,11 +76,15 @@ class Requests(models.Model):
     serviceType = models.CharField(db_column='serviceType', max_length=10)  # Field name made lowercase.
     daysRequested = models.CharField(db_column='daysRequested', max_length=10, blank=True,
                                      null=True)  # Field name made lowercase.
+    startDate = models.DateField(blank=True, null=True)
     startTime = models.TimeField(db_column='startTime', blank=True, null=True)  # Field name made lowercase.
     endTime = models.TimeField(db_column='endTime', blank=True, null=True)  # Field name made lowercase.
     numDaysRequested = models.IntegerField(db_column='numDaysRequested', blank=True,
                                            null=True)  # Field name made lowercase.
     deleted = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Requests({self.requestID})"
 
     def remove(self):
         self.deleted = True
@@ -125,7 +133,7 @@ class Users(models.Model):
                                      null=True)  # Field name made lowercase.
     email = models.CharField(max_length=100, blank=True, null=True)
     roleID = models.ForeignKey(Roles, models.CASCADE, db_column='roleID')  # Field name made lowercase.
-    username = models.CharField(db_column='userName', max_length=100)  # Field name made lowercase.
+    username = models.CharField(db_column='username', max_length=100)  # Field name made lowercase.
     pwd = models.CharField(max_length=32)
     securityQuestionOneID = models.ForeignKey(Securityquestions, models.CASCADE,
                                               related_name="q1", blank=True, null=True,
@@ -188,11 +196,11 @@ class Users(models.Model):
 
 
 class Advertise(models.Model):
-    adID = models.AutoField(db_column='AdID', primary_key=True)
-    typeHS = models.CharField(db_column='Type_H_S', max_length=15)
-    qualification = models.CharField(db_column='Qualification', max_length=10)
+    adID = models.AutoField(db_column='adID', primary_key=True)
+    typeHS = models.CharField(db_column='typeHS', max_length=15)
+    qualification = models.CharField(db_column='qualification', max_length=10)
     education = models.CharField(db_column='education', max_length=100, default="")
-    yearOExp = models.IntegerField(db_column='Year_O_Exp')
+    yearOExp = models.IntegerField(db_column='yearOExp')
     deleted = models.BooleanField(default=False)
 
     def remove(self):

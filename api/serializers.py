@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Users, Securityquestions, Caretaker, Healthcareprofessional, Advertise, Roles
+from .models import Users, Securityquestions, Caretaker, Healthcareprofessional, Advertise, Roles, Requests
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -45,4 +45,10 @@ class HcpSerializer(serializers.ModelSerializer):
 class AdvertiseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Advertise
+        fields = "__all__"
+
+
+class RequestsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Requests
         fields = "__all__"
