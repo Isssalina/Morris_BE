@@ -123,10 +123,12 @@ class CareTakerEnRollView(APIView):
 
 class HealthCareProfessionalsView(APIView):
     def get(self, req, appID=None):
+        enroll = req.GET.get("enroll", False)
+        enroll = True if enroll == "1" else False
         if appID:
             hcp = Healthcareprofessional.objects.filter(advertiseID__adID=int(appID), enroll=False, deleted=False)
         else:
-            hcp = Healthcareprofessional.objects.filter(deleted=False)
+            hcp = Healthcareprofessional.objects.filter(deleted=False, enroll=enroll)
         return Response(data=HcpSerializer(hcp, many=True).data, status=200)
 
     def post(self, req, appID=None):
@@ -276,7 +278,7 @@ class AssignRequestView(APIView):
         _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
         hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
         hcp_related = Requests.objects.filter(hcpID=hcp, deleted=False)
-        
+
         if _requests and hcp:
             _requests.hcpID = hcp
             _requests.save()
