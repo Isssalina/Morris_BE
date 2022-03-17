@@ -62,25 +62,29 @@ class Healthcareprofessional(models.Model):
 class Requests(models.Model):
     requestID = models.IntegerField(db_column='requestID', primary_key=True)  # Field name made lowercase.
     hcpID = models.ForeignKey(Healthcareprofessional, models.CASCADE, db_column='userID', null=True,
-                               blank=True)  # Field name made lowercase.
+                              blank=True)  # Field name made lowercase.
     takerID = models.ForeignKey(Caretaker, models.CASCADE, null=True,
                                 blank=True)  # Field name made lowercase.
     patientFirstName = models.CharField(db_column='patientFirstName', max_length=50)  # Field name made lowercase.
     patientLastName = models.CharField(db_column='patientLastName', max_length=50)  # Field name made lowercase.
     sex = models.CharField(max_length=1)
     dateOfBirth = models.DateField(db_column='dateOfBirth')  # Field name made lowercase.
+
     locationOfService = models.CharField(db_column='locationOfService', max_length=30)  # Field name made lowercase.
     patientPhoneNumber = models.DecimalField(db_column='patientPhoneNumber', max_digits=10,
                                              decimal_places=0)  # Field name made lowercase.
     patientEmail = models.CharField(db_column='patientEmail', max_length=100)  # Field name made lowercase.
     serviceType = models.CharField(db_column='serviceType', max_length=10)  # Field name made lowercase.
-    daysRequested = models.CharField(db_column='daysRequested', max_length=10, blank=True,
-                                     null=True)  # Field name made lowercase.
-    startDate = models.DateField(blank=True, null=True)
-    startTime = models.TimeField(db_column='startTime', blank=True, null=True)  # Field name made lowercase.
-    endTime = models.TimeField(db_column='endTime', blank=True, null=True)  # Field name made lowercase.
-    numDaysRequested = models.IntegerField(db_column='numDaysRequested', blank=True,
-                                           null=True)  # Field name made lowercase.
+    requirements = models.JSONField(default="")
+
+    # daysRequested = models.CharField(db_column='daysRequested', max_length=10, blank=True,
+    #                                  null=True)  # Field name made lowercase.
+    # startDate = models.DateField(blank=True, null=True)
+    # startTime = models.TimeField(db_column='startTime', blank=True, null=True)  # Field name made lowercase.
+    # endTime = models.TimeField(db_column='endTime', blank=True, null=True)  # Field name made lowercase.
+    # numDaysRequested = models.IntegerField(db_column='numDaysRequested', blank=True,
+    #                                        null=True)  # Field name made lowercase.
+    #
     deleted = models.BooleanField(default=False)
 
     def __str__(self):
