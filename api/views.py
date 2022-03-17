@@ -275,8 +275,10 @@ class AssignRequestView(APIView):
         pID = req.data.get('pID')
         _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
         hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
+        hcp_related = Requests.objects.filter(hcpID=hcp, deleted=False)
+        
         if _requests and hcp:
-            _requests.userID = hcp
+            _requests.hcpID = hcp
             _requests.save()
             return Response({}, status=200)
         else:

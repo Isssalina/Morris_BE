@@ -61,7 +61,7 @@ class Healthcareprofessional(models.Model):
 
 class Requests(models.Model):
     requestID = models.IntegerField(db_column='requestID', primary_key=True)  # Field name made lowercase.
-    userID = models.ForeignKey(Healthcareprofessional, models.CASCADE, db_column='userID', null=True,
+    hcpID = models.ForeignKey(Healthcareprofessional, models.CASCADE, db_column='userID', null=True,
                                blank=True)  # Field name made lowercase.
     takerID = models.ForeignKey(Caretaker, models.CASCADE, null=True,
                                 blank=True)  # Field name made lowercase.
