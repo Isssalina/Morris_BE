@@ -244,13 +244,12 @@ class RequestsView(APIView):
     def post(self, req):
         h_request = Requests()
         for k, v in req.data.items():
-            if k == "takerID":
-                v = Caretaker.objects.filter(takerID=int(v), deleted=False).first()
+            if k == "userID":
+                v = Users.objects.filter(userID=int(v), deleted=False).first()
                 if not v:
-                    return Response({"error": "caretaker does not exist"}, status=200)
+                    return Response({"error": "User does not exist"}, status=200)
             setattr(h_request, k, v)
         h_request.save()
-        # todo:something wrong with requestID
         return Response({"requestID": Requests.objects.last().requestID}, status=200)
 
 
@@ -277,11 +276,14 @@ class AssignRequestView(APIView):
         pID = req.data.get('pID')
         _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
         hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
-        hcp_related = Requests.objects.filter(hcpID=hcp, deleted=False)
 
         if _requests and hcp:
-            _requests.hcpID = hcp
-            _requests.save()
-            return Response({}, status=200)
+            has_conflict, results = hcp.is_conflict(_requests.requirements)
+            if has_conflict:
+                return Response({'error': 'Time conflict', "reason": results}, status=400)
+            else:
+                _requests.hcpID = hcp
+                _requests.save()
+                return Response({}, status=200)
         else:
             return Response({'error': 'Requests or Hcp or caretaker does not exist'}, status=404)

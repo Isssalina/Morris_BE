@@ -1,101 +1,8 @@
 from django.db import models
-from datetime import datetime
+import datetime
 import random
 import hashlib
 from .utils import sent_email
-
-
-class Caretaker(models.Model):
-    takerID = models.AutoField(db_column='takerID', primary_key=True)  # Field name made lowercase.
-    firstName = models.CharField(db_column='firstName', max_length=50)  # Field name made lowercase.
-    lastName = models.CharField(db_column='lastName', max_length=50)  # Field name made lowercase.
-    phoneNumber = models.DecimalField(db_column='phoneNumber', max_digits=10, decimal_places=0, blank=True,
-                                      null=True)  # Field name made lowercase.
-    postalAddress = models.CharField(db_column='postalAddress', max_length=255, blank=True,
-                                     null=True)  # Field name made lowercase.
-    email = models.CharField(max_length=100, blank=True, null=True)
-    enroll = models.BooleanField(blank=True, null=True, default=False)
-    userID = models.ForeignKey('Users', models.CASCADE, db_column='userID', blank=True,
-                               null=True)
-    deleted = models.BooleanField(default=False)
-
-    def remove(self):
-        self.deleted = True
-        self.save()
-
-    class Meta:
-        db_table = 'CareTaker'
-
-
-class Healthcareprofessional(models.Model):
-    pID = models.IntegerField(db_column='PID', primary_key=True)  # Field name made lowercase.
-    firstName = models.CharField(db_column='firstName', max_length=50)  # Field name made lowercase.
-    lastName = models.CharField(db_column='lastName', max_length=50)  # Field name made lowercase.
-    sex = models.CharField(max_length=1)
-    ssn = models.DecimalField(db_column='SSN', max_digits=9, decimal_places=0)  # Field name made lowercase.
-    salary = models.FloatField(default=0)
-    typeHS = models.CharField(db_column='Type_H_S', max_length=15)  # Field name made lowercase.
-    qualification = models.CharField(db_column='Qualification', max_length=10)  # Field name made lowercase.
-    qualificationDate = models.DateField(db_column='Qualification_Date',
-                                         default=datetime.now)  # Field name made lowercase.
-    yearOExp = models.IntegerField(db_column='Year_O_Exp')  # Field name made lowercase.
-    phoneNumber = models.DecimalField(db_column='phoneNumber', max_digits=10, decimal_places=0, blank=True,
-                                      null=True)  # Field name made lowercase.
-    postalAddress = models.CharField(db_column='postalAddress', max_length=255, blank=True,
-                                     null=True)  # Field name made lowercase.
-    email = models.CharField(max_length=100, blank=True, null=True)
-    enroll = models.BooleanField(blank=True, null=True, default=False)
-    advertiseID = models.ForeignKey('Advertise', models.CASCADE, db_column='advertiseID', blank=True,
-                                    null=True)  # Field name made lowercase.
-    userID = models.ForeignKey('Users', models.CASCADE, db_column='userID', blank=True,
-                               null=True)  # Field name made lowercase.
-    deleted = models.BooleanField(default=False)
-
-    def remove(self):
-        self.deleted = True
-        self.save()
-
-    class Meta:
-        db_table = 'HealthcareProfessional'
-
-
-class Requests(models.Model):
-    requestID = models.IntegerField(db_column='requestID', primary_key=True)  # Field name made lowercase.
-    hcpID = models.ForeignKey(Healthcareprofessional, models.CASCADE, db_column='userID', null=True,
-                              blank=True)  # Field name made lowercase.
-    takerID = models.ForeignKey(Caretaker, models.CASCADE, null=True,
-                                blank=True)  # Field name made lowercase.
-    patientFirstName = models.CharField(db_column='patientFirstName', max_length=50)  # Field name made lowercase.
-    patientLastName = models.CharField(db_column='patientLastName', max_length=50)  # Field name made lowercase.
-    sex = models.CharField(max_length=1)
-    dateOfBirth = models.DateField(db_column='dateOfBirth')  # Field name made lowercase.
-
-    locationOfService = models.CharField(db_column='locationOfService', max_length=30)  # Field name made lowercase.
-    patientPhoneNumber = models.DecimalField(db_column='patientPhoneNumber', max_digits=10,
-                                             decimal_places=0)  # Field name made lowercase.
-    patientEmail = models.CharField(db_column='patientEmail', max_length=100)  # Field name made lowercase.
-    serviceType = models.CharField(db_column='serviceType', max_length=10)  # Field name made lowercase.
-    requirements = models.JSONField(default="")
-
-    # daysRequested = models.CharField(db_column='daysRequested', max_length=10, blank=True,
-    #                                  null=True)  # Field name made lowercase.
-    # startDate = models.DateField(blank=True, null=True)
-    # startTime = models.TimeField(db_column='startTime', blank=True, null=True)  # Field name made lowercase.
-    # endTime = models.TimeField(db_column='endTime', blank=True, null=True)  # Field name made lowercase.
-    # numDaysRequested = models.IntegerField(db_column='numDaysRequested', blank=True,
-    #                                        null=True)  # Field name made lowercase.
-    #
-    deleted = models.BooleanField(default=False)
-
-    def __str__(self):
-        return f"Requests({self.requestID})"
-
-    def remove(self):
-        self.deleted = True
-        self.save()
-
-    class Meta:
-        db_table = 'Requests'
 
 
 class Roles(models.Model):
@@ -197,6 +104,126 @@ class Users(models.Model):
 
     class Meta:
         db_table = 'Users'
+
+
+class Caretaker(models.Model):
+    takerID = models.AutoField(db_column='takerID', primary_key=True)  # Field name made lowercase.
+    firstName = models.CharField(db_column='firstName', max_length=50)  # Field name made lowercase.
+    lastName = models.CharField(db_column='lastName', max_length=50)  # Field name made lowercase.
+    phoneNumber = models.DecimalField(db_column='phoneNumber', max_digits=10, decimal_places=0, blank=True,
+                                      null=True)  # Field name made lowercase.
+    postalAddress = models.CharField(db_column='postalAddress', max_length=255, blank=True,
+                                     null=True)  # Field name made lowercase.
+    email = models.CharField(max_length=100, blank=True, null=True)
+    enroll = models.BooleanField(blank=True, null=True, default=False)
+    userID = models.ForeignKey('Users', models.CASCADE, db_column='userID', blank=True,
+                               null=True)
+    deleted = models.BooleanField(default=False)
+
+    def remove(self):
+        self.deleted = True
+        self.save()
+
+    class Meta:
+        db_table = 'CareTaker'
+
+
+class Healthcareprofessional(models.Model):
+    pID = models.IntegerField(db_column='PID', primary_key=True)  # Field name made lowercase.
+    firstName = models.CharField(db_column='firstName', max_length=50)  # Field name made lowercase.
+    lastName = models.CharField(db_column='lastName', max_length=50)  # Field name made lowercase.
+    sex = models.CharField(max_length=1)
+    ssn = models.DecimalField(db_column='SSN', max_digits=9, decimal_places=0)  # Field name made lowercase.
+    salary = models.FloatField(default=0)
+    typeHS = models.CharField(db_column='Type_H_S', max_length=15)  # Field name made lowercase.
+    qualification = models.CharField(db_column='Qualification', max_length=10)  # Field name made lowercase.
+    qualificationDate = models.DateField(db_column='Qualification_Date',
+                                         default=datetime.datetime.now)  # Field name made lowercase.
+    yearOExp = models.IntegerField(db_column='Year_O_Exp')  # Field name made lowercase.
+    phoneNumber = models.DecimalField(db_column='phoneNumber', max_digits=10, decimal_places=0, blank=True,
+                                      null=True)  # Field name made lowercase.
+    postalAddress = models.CharField(db_column='postalAddress', max_length=255, blank=True,
+                                     null=True)  # Field name made lowercase.
+    email = models.CharField(max_length=100, blank=True, null=True)
+    enroll = models.BooleanField(blank=True, null=True, default=False)
+    advertiseID = models.ForeignKey('Advertise', models.CASCADE, db_column='advertiseID', blank=True,
+                                    null=True)  # Field name made lowercase.
+    userID = models.ForeignKey('Users', models.CASCADE, db_column='userID', blank=True,
+                               null=True)  # Field name made lowercase.
+    deleted = models.BooleanField(default=False)
+
+    def remove(self):
+        self.deleted = True
+        self.save()
+
+    def is_conflict(self, requirements):
+        all_requests = Requests.objects.filter(deleted=False, hcpID=self)
+        current_schedule = self.get_time_schedule_by_requirements(requirements)
+        for req in all_requests:
+            schedules = self.get_time_schedule_by_requirements(req.requirements)
+            for c in current_schedule:
+                for s in schedules:
+                    if c['start'].date() == s['start'].date():
+                        if not (c['end'] <= s['start'] or c['start'] >= s['end']):
+                            return True, {"requestID": req.requestID}
+
+        return False, False
+
+    @staticmethod
+    def get_time_schedule_by_requirements(r):
+        if not ('startDate' in r and 'numDaysRequested' in r and 'daysRequested' in r):
+            return []
+        startDate = datetime.datetime.strptime(r['startDate'], "%Y-%m-%d")
+        time_schedule = []
+        for x in range(r['numDaysRequested']):
+            _d = startDate + datetime.timedelta(x)
+            if _d.weekday() + 1 in r['daysRequested']:
+                if ('flexibleTime' in r and r['flexibleTime']) or 'startTime' not in r:
+                    s_h, s_m, s_s = 0, 0, 0
+                    e_h, e_m, e_s = 23, 59, 59
+                else:
+                    startTime = datetime.datetime.strptime(r['startTime'], "%H:%M:%S")
+                    endTime = datetime.datetime.strptime(r['endTime'], "%H:%M:%S")
+                    s_h, s_m, s_s = startTime.hour, startTime.minute, startTime.second
+                    e_h, e_m, e_s = endTime.hour, endTime.minute, endTime.second
+                time_schedule.append({
+                    "start": datetime.datetime(_d.year, _d.month, _d.day, s_h, s_m, s_s),
+                    "end": datetime.datetime(_d.year, _d.month, _d.day, e_h, e_m, e_s)
+                })
+        return time_schedule
+
+    class Meta:
+        db_table = 'HealthcareProfessional'
+
+
+class Requests(models.Model):
+    requestID = models.IntegerField(db_column='requestID', primary_key=True)  # Field name made lowercase.
+    hcpID = models.ForeignKey(Healthcareprofessional, models.CASCADE, db_column='userID', null=True,
+                              blank=True)  # Field name made lowercase.
+    userID = models.ForeignKey(Users, models.CASCADE, null=True,
+                               blank=True)  # Field name made lowercase.
+    patientFirstName = models.CharField(db_column='patientFirstName', max_length=50)  # Field name made lowercase.
+    patientLastName = models.CharField(db_column='patientLastName', max_length=50)  # Field name made lowercase.
+    sex = models.CharField(max_length=1)
+    dateOfBirth = models.DateField(db_column='dateOfBirth')  # Field name made lowercase.
+
+    locationOfService = models.CharField(db_column='locationOfService', max_length=30)  # Field name made lowercase.
+    patientPhoneNumber = models.DecimalField(db_column='patientPhoneNumber', max_digits=10,
+                                             decimal_places=0)  # Field name made lowercase.
+    patientEmail = models.CharField(db_column='patientEmail', max_length=100)  # Field name made lowercase.
+    serviceType = models.CharField(db_column='serviceType', max_length=10)  # Field name made lowercase.
+    requirements = models.JSONField(default="")
+    deleted = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Requests({self.requestID})"
+
+    def remove(self):
+        self.deleted = True
+        self.save()
+
+    class Meta:
+        db_table = 'Requests'
 
 
 class Advertise(models.Model):
