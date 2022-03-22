@@ -249,6 +249,10 @@ class RequestsView(APIView):
                 if not v:
                     return Response({"error": "User does not exist"}, status=200)
             setattr(h_request, k, v)
+        h_request.distribution = {
+            "assigned": [],
+            "unassigned": h_request.requirements['daysRequested']
+        }
         h_request.save()
         return Response({"requestID": Requests.objects.last().requestID}, status=200)
 
@@ -264,7 +268,9 @@ class RequestView(APIView):
     def delete(self, req, pk):
         _requests = Requests.objects.filter(requestID=int(pk), deleted=False).first()
         if _requests:
+            _requests.delete_hcp_schedule()
             _requests.remove()
+
             return Response({}, status=200)
         else:
             return Response({'error': 'Requests does not exist'}, status=404)
@@ -278,12 +284,40 @@ class AssignRequestView(APIView):
         hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
 
         if _requests and hcp:
-            has_conflict, results = hcp.is_conflict(_requests.requirements)
-            if has_conflict:
-                return Response({'error': 'Time conflict', "reason": results}, status=400)
+            daysRequested = req.data.get("daysRequested")
+            r = _requests.requirements
+            distribution = _requests.distribution
+            flexibleTime = r['flexibleTime'] if 'flexibleTime' in r else False
+            if flexibleTime:
+                startTime = req.data.get("startTime")
+                endTime = req.data.get("endTime")
             else:
-                _requests.hcpID = hcp
-                _requests.save()
-                return Response({}, status=200)
+                startTime = r['startTime']
+                endTime = r['endTime']
+            hcp.add_schedule(r['startDate'], startTime, endTime, _requests.requestID, r['numDaysRequested'],
+                             daysRequested)
+            unassigned_list = distribution['unassigned']
+            for i in daysRequested:
+                if i in unassigned_list:
+                    del distribution['unassigned'][unassigned_list.index(i)]
+                else:
+                    return Response({"error": f"daysRequested {i} has been assigned"}, 400)
+            distribution['assigned'].append({
+                "days": daysRequested,
+                "pID": hcp.pID
+            })
+            _requests.hcpID = hcp
+            _requests.distribution = distribution
+            _requests.save()
+            return Response({}, status=200)
         else:
             return Response({'error': 'Requests or Hcp or caretaker does not exist'}, status=404)
+
+
+class AvailableHcpView(APIView):
+    def get(self, req, requestID):
+        _request = Requests.objects.filter(requestID=int(requestID)).first()
+
+        if _request:
+            return Response(data=HcpSerializer(_request.get_available_hcp(), many=True).data)
+        return Response({"error": "requests does not exist"}, 404)

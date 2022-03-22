@@ -5,6 +5,27 @@ import hashlib
 from .utils import sent_email
 
 
+def get_time_schedule(startDate, numDaysRequested, daysRequested, startTime, endTime, flexibleTime):
+    time_schedule = []
+    startDate = datetime.datetime.strptime(startDate, "%Y-%m-%d")
+    startTime = datetime.datetime.strptime(startTime, "%H:%M:%S")
+    endTime = datetime.datetime.strptime(endTime, "%H:%M:%S")
+    for x in range(numDaysRequested):
+        _d = startDate + datetime.timedelta(x)
+        if _d.weekday() + 1 in daysRequested:
+            if flexibleTime:
+                s_h, s_m, s_s = 0, 0, 0
+                e_h, e_m, e_s = 23, 59, 59
+            else:
+                s_h, s_m, s_s = startTime.hour, startTime.minute, startTime.second
+                e_h, e_m, e_s = endTime.hour, endTime.minute, endTime.second
+            time_schedule.append({
+                "start": datetime.datetime(_d.year, _d.month, _d.day, s_h, s_m, s_s),
+                "end": datetime.datetime(_d.year, _d.month, _d.day, e_h, e_m, e_s)
+            })
+    return time_schedule
+
+
 class Roles(models.Model):
     roleID = models.AutoField(db_column='roleID', primary_key=True)  # Field name made lowercase.
     roleName = models.CharField(db_column='roleName', max_length=30)  # Field name made lowercase.
@@ -150,10 +171,45 @@ class Healthcareprofessional(models.Model):
                                     null=True)  # Field name made lowercase.
     userID = models.ForeignKey('Users', models.CASCADE, db_column='userID', blank=True,
                                null=True)  # Field name made lowercase.
+    schedule = models.JSONField(default={})
     deleted = models.BooleanField(default=False)
 
     def remove(self):
         self.deleted = True
+        self.save()
+
+    def get_all_schedule(self):
+        schedules = []
+        if self.schedule:
+            for k, v in self.schedule.items():
+                for item in v:
+                    schedules.extend(
+                        get_time_schedule(item['startDate'], item['numDaysRequested'], item['daysRequested'],
+                                          item['startTime'], item['endTime'], False))
+        return schedules
+
+    def add_schedule(self, startDate, startTime, endTime, requestID, numDaysRequested, daysRequested):
+        schedule = self.schedule
+        if not schedule:
+            schedule = {}
+        item = {
+            "startDate": startDate,
+            "startTime": startTime,
+            'endTime': endTime,
+            "numDaysRequested": numDaysRequested,
+            "daysRequested": daysRequested
+        }
+        if requestID in schedule:
+            schedule[requestID].append(item)
+        else:
+            schedule[requestID] = [item]
+        self.schedule = schedule
+        self.save()
+
+    def remove_schedule(self, requestID):
+        schedule = self.schedule
+        del schedule[str(requestID)]
+        self.schedule = schedule
         self.save()
 
     def is_conflict(self, requirements):
@@ -163,6 +219,7 @@ class Healthcareprofessional(models.Model):
             schedules = self.get_time_schedule_by_requirements(req.requirements)
             for c in current_schedule:
                 for s in schedules:
+                    print(c, s)
                     if c['start'].date() == s['start'].date():
                         if not (c['end'] <= s['start'] or c['start'] >= s['end']):
                             return True, {"requestID": req.requestID}
@@ -198,8 +255,6 @@ class Healthcareprofessional(models.Model):
 
 class Requests(models.Model):
     requestID = models.IntegerField(db_column='requestID', primary_key=True)  # Field name made lowercase.
-    hcpID = models.ForeignKey(Healthcareprofessional, models.CASCADE, db_column='userID', null=True,
-                              blank=True)  # Field name made lowercase.
     userID = models.ForeignKey(Users, models.CASCADE, null=True,
                                blank=True)  # Field name made lowercase.
     patientFirstName = models.CharField(db_column='patientFirstName', max_length=50)  # Field name made lowercase.
@@ -212,11 +267,46 @@ class Requests(models.Model):
                                              decimal_places=0)  # Field name made lowercase.
     patientEmail = models.CharField(db_column='patientEmail', max_length=100)  # Field name made lowercase.
     serviceType = models.CharField(db_column='serviceType', max_length=10)  # Field name made lowercase.
-    requirements = models.JSONField(default="")
+    requirements = models.JSONField(default={})
+    distribution = models.JSONField(default={})
     deleted = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Requests({self.requestID})"
+
+    def delete_hcp_schedule(self):
+        assigned = self.distribution['assigned']
+        for item in assigned:
+            hcp = Healthcareprofessional.objects.filter(pID=int(item['pID'])).first()
+            if hcp:
+                hcp.remove_schedule(self.requestID)
+
+    def get_available_hcp(self):
+        distribution = self.distribution
+        requirements = self.requirements
+        hcp_list = Healthcareprofessional.objects.all()
+        required_hcp_list = []
+        unassigned = distribution['unassigned']
+        if len(unassigned) == 0:
+            return []
+        startDate = requirements['startDate']
+        numDaysRequested = requirements['numDaysRequested']
+        startTime = requirements['startTime']
+        flexibleTime = requirements['flexibleTime'] if 'flexibleTime' in requirements else False
+        endTime = requirements['endTime']
+        current_schedule = get_time_schedule(startDate, numDaysRequested, unassigned, startTime, endTime,
+                                             flexibleTime)
+        for hcp in hcp_list:
+            hcp_schedule = hcp.get_all_schedule()
+            required = True
+            for h in hcp_schedule:
+                for c in current_schedule:
+                    if c['start'].date() == h['start'].date():
+                        if not (h['end'] <= c['start'] or h['start'] >= c['end']):
+                            required = False
+            if required:
+                required_hcp_list.append(hcp)
+        return required_hcp_list
 
     def remove(self):
         self.deleted = True
