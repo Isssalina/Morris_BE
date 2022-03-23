@@ -284,7 +284,7 @@ class Requests(models.Model):
     def get_available_hcp(self, startTime=None, endTime=None, daysRequested=None):
         distribution = self.distribution
         requirements = self.requirements
-        hcp_list = Healthcareprofessional.objects.all()
+        hcp_list = Healthcareprofessional.objects.all(enroll=True, deleted=False)
         required_hcp_list = []
         if not daysRequested:
             daysRequested = distribution['unassigned']
