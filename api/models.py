@@ -309,7 +309,11 @@ class Requests(models.Model):
                         if not (h['end'] <= c['start'] or h['start'] >= c['end']):
                             required = False
             if required:
-                required_hcp_list.append(hcp)
+                hcp.schedule['available'] = True
+            else:
+                hcp.schedule['available'] = False
+            required_hcp_list.append(hcp)
+
         return required_hcp_list
 
     def remove(self):
