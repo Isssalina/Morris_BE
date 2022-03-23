@@ -8,8 +8,8 @@ from .utils import sent_email
 def get_time_schedule(startDate, numDaysRequested, daysRequested, startTime, endTime, flexibleTime):
     time_schedule = []
     startDate = datetime.datetime.strptime(startDate, "%Y-%m-%d")
-    startTime = datetime.datetime.strptime(startTime, "%H:%M:%S")
-    endTime = datetime.datetime.strptime(endTime, "%H:%M:%S")
+    startTime = datetime.datetime.strptime(startTime, "%H:%M")
+    endTime = datetime.datetime.strptime(endTime, "%H:%M")
     for x in range(numDaysRequested):
         _d = startDate + datetime.timedelta(x)
         if _d.weekday() + 1 in daysRequested:
@@ -239,8 +239,8 @@ class Healthcareprofessional(models.Model):
                     s_h, s_m, s_s = 0, 0, 0
                     e_h, e_m, e_s = 23, 59, 59
                 else:
-                    startTime = datetime.datetime.strptime(r['startTime'], "%H:%M:%S")
-                    endTime = datetime.datetime.strptime(r['endTime'], "%H:%M:%S")
+                    startTime = datetime.datetime.strptime(r['startTime'], "%H:%M")
+                    endTime = datetime.datetime.strptime(r['endTime'], "%H:%M")
                     s_h, s_m, s_s = startTime.hour, startTime.minute, startTime.second
                     e_h, e_m, e_s = endTime.hour, endTime.minute, endTime.second
                 time_schedule.append({
