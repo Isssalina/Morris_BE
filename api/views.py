@@ -315,9 +315,12 @@ class AssignRequestView(APIView):
 
 
 class AvailableHcpView(APIView):
-    def get(self, req, requestID):
+    def post(self, req, requestID):
         _request = Requests.objects.filter(requestID=int(requestID)).first()
-
+        startTime = req.data.get("startTime", None)
+        endTime = req.data.get("endTime", None)
+        daysRequested = req.data.get("daysRequested", None)
         if _request:
-            return Response(data=HcpSerializer(_request.get_available_hcp(), many=True).data)
+            return Response(
+                data=HcpSerializer(_request.get_available_hcp(startTime, endTime, daysRequested), many=True).data)
         return Response({"error": "requests does not exist"}, 404)

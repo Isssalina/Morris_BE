@@ -281,20 +281,24 @@ class Requests(models.Model):
             if hcp:
                 hcp.remove_schedule(self.requestID)
 
-    def get_available_hcp(self):
+    def get_available_hcp(self, startTime=None, endTime=None, daysRequested=None):
         distribution = self.distribution
         requirements = self.requirements
         hcp_list = Healthcareprofessional.objects.all()
         required_hcp_list = []
-        unassigned = distribution['unassigned']
-        if len(unassigned) == 0:
-            return []
+        if not daysRequested:
+            daysRequested = distribution['unassigned']
+            if len(daysRequested) == 0:
+                return []
+
         startDate = requirements['startDate']
         numDaysRequested = requirements['numDaysRequested']
-        startTime = requirements['startTime']
+        if not startTime:
+            startTime = requirements['startTime']
         flexibleTime = requirements['flexibleTime'] if 'flexibleTime' in requirements else False
-        endTime = requirements['endTime']
-        current_schedule = get_time_schedule(startDate, numDaysRequested, unassigned, startTime, endTime,
+        if not endTime:
+            endTime = requirements['endTime']
+        current_schedule = get_time_schedule(startDate, numDaysRequested, daysRequested, startTime, endTime,
                                              flexibleTime)
         for hcp in hcp_list:
             hcp_schedule = hcp.get_all_schedule()
