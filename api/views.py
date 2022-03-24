@@ -282,7 +282,7 @@ class AssignRequestView(APIView):
         pID = req.data.get('pID')
         _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
         hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
-        
+
         if _requests and hcp:
             daysRequested = req.data.get("daysRequested")
             r = _requests.requirements

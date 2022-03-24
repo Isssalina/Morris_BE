@@ -212,43 +212,6 @@ class Healthcareprofessional(models.Model):
         self.schedule = schedule
         self.save()
 
-    def is_conflict(self, requirements):
-        all_requests = Requests.objects.filter(deleted=False, hcpID=self)
-        current_schedule = self.get_time_schedule_by_requirements(requirements)
-        for req in all_requests:
-            schedules = self.get_time_schedule_by_requirements(req.requirements)
-            for c in current_schedule:
-                for s in schedules:
-                    print(c, s)
-                    if c['start'].date() == s['start'].date():
-                        if not (c['end'] <= s['start'] or c['start'] >= s['end']):
-                            return True, {"requestID": req.requestID}
-
-        return False, False
-
-    @staticmethod
-    def get_time_schedule_by_requirements(r):
-        if not ('startDate' in r and 'numDaysRequested' in r and 'daysRequested' in r):
-            return []
-        startDate = datetime.datetime.strptime(r['startDate'], "%Y-%m-%d")
-        time_schedule = []
-        for x in range(r['numDaysRequested']):
-            _d = startDate + datetime.timedelta(x)
-            if _d.weekday() + 1 in r['daysRequested']:
-                if ('flexibleTime' in r and r['flexibleTime']) or 'startTime' not in r:
-                    s_h, s_m, s_s = 0, 0, 0
-                    e_h, e_m, e_s = 23, 59, 59
-                else:
-                    startTime = datetime.datetime.strptime(r['startTime'], "%H:%M")
-                    endTime = datetime.datetime.strptime(r['endTime'], "%H:%M")
-                    s_h, s_m, s_s = startTime.hour, startTime.minute, startTime.second
-                    e_h, e_m, e_s = endTime.hour, endTime.minute, endTime.second
-                time_schedule.append({
-                    "start": datetime.datetime(_d.year, _d.month, _d.day, s_h, s_m, s_s),
-                    "end": datetime.datetime(_d.year, _d.month, _d.day, e_h, e_m, e_s)
-                })
-        return time_schedule
-
     class Meta:
         db_table = 'HealthcareProfessional'
 
@@ -281,7 +244,7 @@ class Requests(models.Model):
             if hcp:
                 hcp.remove_schedule(self.requestID)
 
-    def get_available_hcp(self, startTime=None, endTime=None, daysRequested=None):
+    def get_available_hcp(self, startTime=None, endTime=None, daysRequested=None, flexibleTime=False):
         distribution = self.distribution
         requirements = self.requirements
         hcp_list = Healthcareprofessional.objects.filter(enroll=True, deleted=False)
@@ -290,12 +253,10 @@ class Requests(models.Model):
             daysRequested = distribution['unassigned']
             if len(daysRequested) == 0:
                 return []
-
         startDate = requirements['startDate']
         numDaysRequested = requirements['numDaysRequested']
         if not startTime:
             startTime = requirements['startTime']
-        flexibleTime = requirements['flexibleTime'] if 'flexibleTime' in requirements else False
         if not endTime:
             endTime = requirements['endTime']
         current_schedule = get_time_schedule(startDate, numDaysRequested, daysRequested, startTime, endTime,
