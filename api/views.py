@@ -265,6 +265,15 @@ class RequestView(APIView):
         else:
             return Response({'error': 'Requests does not exist'}, status=404)
 
+    def put(self, req, pk):
+        _requests = Requests.objects.filter(requestID=int(pk), deleted=False).first()
+        if _requests:
+            for k, v in req.data.items():
+                setattr(_requests, k, v)
+            _requests.save()
+            return Response({})
+        return Response(data={'error': "Request does not exist"}, status=404)
+
     def delete(self, req, pk):
         _requests = Requests.objects.filter(requestID=int(pk), deleted=False).first()
         if _requests:

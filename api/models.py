@@ -165,6 +165,7 @@ class Healthcareprofessional(models.Model):
                                       null=True)  # Field name made lowercase.
     postalAddress = models.CharField(db_column='postalAddress', max_length=255, blank=True,
                                      null=True)  # Field name made lowercase.
+    dateOfBirth = models.DateField(default=datetime.datetime.now)
     email = models.CharField(max_length=100, blank=True, null=True)
     enroll = models.BooleanField(blank=True, null=True, default=False)
     advertiseID = models.ForeignKey('Advertise', models.CASCADE, db_column='advertiseID', blank=True,
@@ -173,6 +174,9 @@ class Healthcareprofessional(models.Model):
                                null=True)  # Field name made lowercase.
     schedule = models.JSONField(default={})
     deleted = models.BooleanField(default=False)
+
+    def age(self):
+        return datetime.datetime.now().year - self.dateOfBirth.year
 
     def remove(self):
         self.deleted = True
@@ -229,7 +233,6 @@ class Requests(models.Model):
     patientPhoneNumber = models.DecimalField(db_column='patientPhoneNumber', max_digits=10,
                                              decimal_places=0)  # Field name made lowercase.
     patientEmail = models.CharField(db_column='patientEmail', max_length=100)  # Field name made lowercase.
-    serviceType = models.CharField(db_column='serviceType', max_length=10)  # Field name made lowercase.
     requirements = models.JSONField(default={})
     distribution = models.JSONField(default={})
     deleted = models.BooleanField(default=False)
@@ -244,11 +247,22 @@ class Requests(models.Model):
             if hcp:
                 hcp.remove_schedule(self.requestID)
 
+    def check_requirements(self, hcp, requirements):
+        available = True
+        if "age_min" in requirements:
+            available = available and hcp.age() >= requirements['age_min']
+        if "age_max" in requirements:
+            available = available and hcp.age() <= requirements['age_max']
+        if "gender" in requirements:
+            available = available and hcp.sex == requirements['gender']
+        if 'serviceType' in requirements:
+            available = available and hcp.typeHS == requirements['serviceType']
+        return available
+
     def get_available_hcp(self, startTime=None, endTime=None, daysRequested=None, flexibleTime=False):
         distribution = self.distribution
         requirements = self.requirements
-        serviceType = requirements['serviceType']
-        hcp_list = Healthcareprofessional.objects.filter(enroll=True, deleted=False, typeHS=serviceType)
+        hcp_list = Healthcareprofessional.objects.filter(enroll=True, deleted=False)
         required_hcp_list = []
         if not daysRequested:
             daysRequested = distribution['unassigned']
@@ -262,18 +276,17 @@ class Requests(models.Model):
             endTime = requirements['endTime']
         current_schedule = get_time_schedule(startDate, numDaysRequested, daysRequested, startTime, endTime,
                                              flexibleTime)
+        print(hcp_list)
         for hcp in hcp_list:
             hcp_schedule = hcp.get_all_schedule()
-            required = True
+            available = True
             for h in hcp_schedule:
                 for c in current_schedule:
                     if c['start'].date() == h['start'].date():
                         if not (h['end'] <= c['start'] or h['start'] >= c['end']):
-                            required = False
-            if required:
-                hcp.schedule['available'] = True
-            else:
-                hcp.schedule['available'] = False
+                            available = False
+
+            hcp.schedule['available'] = available and self.check_requirements(hcp, requirements)
             required_hcp_list.append(hcp)
 
         return required_hcp_list
