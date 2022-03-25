@@ -276,7 +276,6 @@ class Requests(models.Model):
             endTime = requirements['endTime']
         current_schedule = get_time_schedule(startDate, numDaysRequested, daysRequested, startTime, endTime,
                                              flexibleTime)
-        print(hcp_list)
         for hcp in hcp_list:
             hcp_schedule = hcp.get_all_schedule()
             available = True
