@@ -4,9 +4,22 @@ from rest_framework.views import Response
 from .models import Users, Securityquestions, Caretaker, Healthcareprofessional, Advertise, Requests
 from .serializers import UserSerializer, SecurityQuestionsSerializer, CareTakerSerializer, HcpSerializer, \
     AdvertiseSerializer, RequestsSerializer
+from rest_framework.authentication import SessionAuthentication
+
+
+class UnsafeSessionAuthentication(SessionAuthentication):
+    def authenticate(self, request):
+        http_request = request._request
+        user = getattr(http_request, 'user', None)
+        if not user or not user.is_active:
+            return None
+
+        return (user, None)
 
 
 class AuthView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
     def post(self, req):
         username = req.data.get("username", None)
         pwd = req.data.get('pwd', None)
@@ -18,6 +31,8 @@ class AuthView(APIView):
 
 
 class UserListView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
     def get(self, req):
         user = Users.objects.filter(deleted=False)
         return Response(UserSerializer(user, many=True).data, status=200)
@@ -29,6 +44,8 @@ class UserListView(APIView):
 
 
 class UserView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
     def get(self, req, pk):
         user = Users.objects.filter(userID=int(pk), deleted=False).first()
         if user:
@@ -58,12 +75,16 @@ class UserView(APIView):
 
 
 class QuestionListView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
     def get(self, req):
         qs = Securityquestions.objects.filter(deleted=False)
         return Response(SecurityQuestionsSerializer(qs, many=True).data, status=200)
 
 
 class QuestionView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
     def get(self, req, userID):
         user = Users.objects.filter(userID=int(userID), deleted=False).first()
         if user:
@@ -83,6 +104,8 @@ class QuestionView(APIView):
 
 
 class CareTakersView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
     def get(self, req):
         caretakers = Caretaker.objects.filter(deleted=False)
         return Response(data=CareTakerSerializer(caretakers, many=True).data, status=200)
@@ -97,6 +120,8 @@ class CareTakersView(APIView):
 
 
 class CareTakerView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
     def get(self, req, pk):
         caretaker = Caretaker.objects.filter(takerID=int(pk), deleted=False).first()
         if caretaker:
@@ -105,6 +130,8 @@ class CareTakerView(APIView):
 
 
 class CareTakerEnRollView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
     def post(self, req, takerID):
         taker = Caretaker.objects.filter(takerID=int(takerID), deleted=False).first()
         if taker:
@@ -122,6 +149,8 @@ class CareTakerEnRollView(APIView):
 
 
 class HealthCareProfessionalsView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
     def get(self, req, appID=None):
         enroll = req.GET.get("enroll", False)
         enroll = True if enroll == "1" else False
@@ -145,6 +174,8 @@ class HealthCareProfessionalsView(APIView):
 
 
 class HealthCareProfessionalView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
     def get(self, req, pk):
         hcp = Healthcareprofessional.objects.filter(pID=int(pk), deleted=False).first()
         if hcp:
@@ -172,6 +203,8 @@ class HealthCareProfessionalView(APIView):
 
 
 class ApplicationsView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
     def get(self, req):
         typeHS = req.query_params.get("type", None)
         applications = Advertise.objects.filter(deleted=False)
@@ -188,6 +221,8 @@ class ApplicationsView(APIView):
 
 
 class ApplicationView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
     def get(self, req, pk):
         application = Advertise.objects.filter(adID=int(pk), deleted=False).first()
         if application:
@@ -203,6 +238,8 @@ class ApplicationView(APIView):
 
 
 class HcpApproveView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
     # approve
     def get(self, req, pID):
         hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
@@ -226,6 +263,8 @@ class HcpApproveView(APIView):
 
 
 class HcpDenyView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
     # deny
     def get(self, req, pID):
         hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
@@ -237,6 +276,8 @@ class HcpDenyView(APIView):
 
 
 class RequestsView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
     def get(self, req):
         requests = Requests.objects.filter(deleted=False)
         return Response(RequestsSerializer(requests, many=True).data, status=200)
@@ -258,6 +299,8 @@ class RequestsView(APIView):
 
 
 class RequestView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
     def get(self, req, pk):
         _requests = Requests.objects.filter(requestID=int(pk), deleted=False).first()
         if _requests:
@@ -286,6 +329,8 @@ class RequestView(APIView):
 
 
 class AssignRequestView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
     def post(self, req):
         requestID = req.data.get("requestID")
         pID = req.data.get('pID')
@@ -324,6 +369,8 @@ class AssignRequestView(APIView):
 
 
 class AvailableHcpView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
     def post(self, req, requestID):
         _request = Requests.objects.filter(requestID=int(requestID)).first()
         startTime = req.data.get("startTime", None)
