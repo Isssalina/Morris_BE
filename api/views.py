@@ -5,6 +5,7 @@ from .models import Users, Securityquestions, Caretaker, Healthcareprofessional,
 from .serializers import UserSerializer, SecurityQuestionsSerializer, CareTakerSerializer, HcpSerializer, \
     AdvertiseSerializer, RequestsSerializer
 from rest_framework.authentication import SessionAuthentication
+from .utils import is_conflict, get_time_schedule
 
 
 class UnsafeSessionAuthentication(SessionAuthentication):
@@ -284,6 +285,27 @@ class RequestsView(APIView):
 
     def post(self, req):
         h_request = Requests()
+        # 1.检查是否发布过serviceType相同的request
+        patientFirstName = req.data.get("patientFirstName", None)
+        patientLastName = req.data.get("patientLastName", None)
+        dateOfBirth = req.data.get("dateOfBirth", None)
+        r = req.data.get("requirements")
+        serviceType = r['serviceType']
+        exist = Requests.objects.filter(patientFirstName=patientFirstName, patientLastName=patientLastName,
+                                        dateOfBirth=dateOfBirth, requirements__serviceType=serviceType).first()
+        startDate = r['startDate']
+        numDaysRequested = r['numDaysRequested']
+        daysRequested = r['daysRequested']
+        startTime = r['startTime'] if 'startTime' in r else False
+        endTime = r['endTime'] if 'endTime' in r else False
+        flexibleTime = r['flexibleTime'] if 'flexibleTime' in r else False
+        if exist:
+            # 2.检查时间是否重合
+            exist_schedule = exist.get_schedule()
+            current_schedule = get_time_schedule(startDate, numDaysRequested, daysRequested, startTime, endTime,
+                                                 flexibleTime)
+            if is_conflict(exist_schedule, current_schedule):
+                return Response({"error": "The current patient has posted the same request during this time period"})
         for k, v in req.data.items():
             if k == "userID":
                 v = Users.objects.filter(userID=int(v), deleted=False).first()
@@ -336,11 +358,34 @@ class AssignRequestView(APIView):
         pID = req.data.get('pID')
         _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
         hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
-
         if _requests and hcp:
             daysRequested = req.data.get("daysRequested")
             r = _requests.requirements
-            distribution = _requests.distribution
+            flexibleTime = r['flexibleTime'] if 'flexibleTime' in r else False
+            if flexibleTime:
+                startTime = req.data.get("startTime")
+                endTime = req.data.get("endTime")
+            else:
+                startTime = r['startTime']
+                endTime = r['endTime']
+            status, result = _requests.assign(hcp, daysRequested, startTime, endTime)
+            return Response(result, status=status)
+        else:
+            return Response({'error': 'Requests or Hcp or caretaker does not exist'}, status=404)
+
+
+class UnAssignRequestView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
+    def post(self, req):
+        requestID = req.data.get("requestID")
+        pID = req.data.get('pID')
+        sID = req.data.get('sID')
+        _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
+        hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
+        if _requests and hcp:
+            daysRequested = req.data.get("daysRequested")
+            r = _requests.requirements
             flexibleTime = r['flexibleTime'] if 'flexibleTime' in r else False
             if flexibleTime:
                 startTime = req.data.get("startTime")
@@ -350,20 +395,8 @@ class AssignRequestView(APIView):
                 endTime = r['endTime']
             hcp.add_schedule(r['startDate'], startTime, endTime, _requests.requestID, r['numDaysRequested'],
                              daysRequested)
-            unassigned_list = distribution['unassigned']
-            for i in daysRequested:
-                if i in unassigned_list:
-                    del distribution['unassigned'][unassigned_list.index(i)]
-                else:
-                    return Response({"error": f"daysRequested {i} has been assigned"}, 400)
-            distribution['assigned'].append({
-                "days": daysRequested,
-                "pID": hcp.pID
-            })
-            _requests.hcpID = hcp
-            _requests.distribution = distribution
-            _requests.save()
-            return Response({}, status=200)
+            status, result = _requests.assign(hcp, daysRequested, startTime, endTime)
+            return Response(result, status=status)
         else:
             return Response({'error': 'Requests or Hcp or caretaker does not exist'}, status=404)
 
