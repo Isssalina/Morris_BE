@@ -14,8 +14,7 @@ class UnsafeSessionAuthentication(SessionAuthentication):
         user = getattr(http_request, 'user', None)
         if not user or not user.is_active:
             return None
-
-        return (user, None)
+        return user, None
 
 
 class AuthView(APIView):
@@ -280,7 +279,10 @@ class RequestsView(APIView):
     authentication_classes = (UnsafeSessionAuthentication,)
 
     def get(self, req):
+        userID = req.query_params.get("userID", None)
         requests = Requests.objects.filter(deleted=False)
+        if userID:
+            requests = requests.filter(userID__userID=int(userID))
         return Response(RequestsSerializer(requests, many=True).data, status=200)
 
     def post(self, req):
@@ -342,9 +344,7 @@ class RequestView(APIView):
     def delete(self, req, pk):
         _requests = Requests.objects.filter(requestID=int(pk), deleted=False).first()
         if _requests:
-            _requests.delete_hcp_schedule()
             _requests.remove()
-
             return Response({}, status=200)
         else:
             return Response({'error': 'Requests does not exist'}, status=404)
@@ -358,20 +358,25 @@ class AssignRequestView(APIView):
         pID = req.data.get('pID')
         _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
         hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
-        if _requests and hcp:
-            daysRequested = req.data.get("daysRequested")
-            r = _requests.requirements
-            flexibleTime = r['flexibleTime'] if 'flexibleTime' in r else False
-            if flexibleTime:
-                startTime = req.data.get("startTime")
-                endTime = req.data.get("endTime")
-            else:
-                startTime = r['startTime']
-                endTime = r['endTime']
-            status, result = _requests.assign(hcp, daysRequested, startTime, endTime)
-            return Response(result, status=status)
+        if not _requests:
+            return Response({'error': 'Requests does not exist'}, status=404)
+        if not hcp:
+            return Response({'error': 'Hcp does not exist'}, status=404)
+        if not hcp.enroll:
+            return Response({'error': 'The current hcp is not enrolled'}, status=400)
+        daysRequested = req.data.get("daysRequested")
+        r = _requests.requirements
+        flexibleTime = r['flexibleTime'] if 'flexibleTime' in r else False
+        if flexibleTime:
+            startTime = req.data.get("startTime")
+            endTime = req.data.get("endTime")
+            if not (startTime and endTime):
+                return Response({'error': 'FlexibleTime request requires start time and end time'}, status=400)
         else:
-            return Response({'error': 'Requests or Hcp or caretaker does not exist'}, status=404)
+            startTime = r['startTime']
+            endTime = r['endTime']
+        status, results = _requests.assign(hcp, daysRequested, startTime, endTime)
+        return Response(results, status=status)
 
 
 class UnAssignRequestView(APIView):
@@ -380,25 +385,18 @@ class UnAssignRequestView(APIView):
     def post(self, req):
         requestID = req.data.get("requestID")
         pID = req.data.get('pID')
-        sID = req.data.get('sID')
+        assignID = req.data.get('assignID')
         _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
         hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
-        if _requests and hcp:
-            daysRequested = req.data.get("daysRequested")
-            r = _requests.requirements
-            flexibleTime = r['flexibleTime'] if 'flexibleTime' in r else False
-            if flexibleTime:
-                startTime = req.data.get("startTime")
-                endTime = req.data.get("endTime")
-            else:
-                startTime = r['startTime']
-                endTime = r['endTime']
-            hcp.add_schedule(r['startDate'], startTime, endTime, _requests.requestID, r['numDaysRequested'],
-                             daysRequested)
-            status, result = _requests.assign(hcp, daysRequested, startTime, endTime)
-            return Response(result, status=status)
-        else:
-            return Response({'error': 'Requests or Hcp or caretaker does not exist'}, status=404)
+        if not _requests:
+            return Response({'error': 'Requests does not exist'}, status=404)
+        if not hcp:
+            return Response({'error': 'Hcp does not exist'}, status=404)
+        if not hcp.enroll:
+            return Response({'error': 'The current hcp is not enrolled'}, status=400)
+
+        status, results = _requests.un_assign(hcp, assignID)
+        return Response(results, status=status)
 
 
 class AvailableHcpView(APIView):

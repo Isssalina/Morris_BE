@@ -39,8 +39,6 @@ def is_conflict(time_schedule1, time_schedule2):
 def get_time_schedule(startDate, numDaysRequested, daysRequested, startTime, endTime, flexibleTime):
     time_schedule = []
     startDate = datetime.datetime.strptime(startDate, "%Y-%m-%d")
-    startTime = datetime.datetime.strptime(startTime, "%H:%M")
-    endTime = datetime.datetime.strptime(endTime, "%H:%M")
     for x in range(numDaysRequested):
         _d = startDate + datetime.timedelta(x)
         if _d.weekday() + 1 in daysRequested:
@@ -48,6 +46,8 @@ def get_time_schedule(startDate, numDaysRequested, daysRequested, startTime, end
                 s_h, s_m, s_s = 0, 0, 0
                 e_h, e_m, e_s = 23, 59, 59
             else:
+                startTime = datetime.datetime.strptime(startTime, "%H:%M")
+                endTime = datetime.datetime.strptime(endTime, "%H:%M")
                 s_h, s_m, s_s = startTime.hour, startTime.minute, startTime.second
                 e_h, e_m, e_s = endTime.hour, endTime.minute, endTime.second
             time_schedule.append({
@@ -55,3 +55,14 @@ def get_time_schedule(startDate, numDaysRequested, daysRequested, startTime, end
                 "end": datetime.datetime(_d.year, _d.month, _d.day, e_h, e_m, e_s)
             })
     return time_schedule
+
+
+def popItem(array, key):
+    new_array = []
+    pop_one = None
+    for item in array:
+        if key(item):
+            pop_one = item
+        else:
+            new_array.append(item)
+    return pop_one, new_array

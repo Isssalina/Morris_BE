@@ -2,7 +2,7 @@ from django.db import models
 import datetime
 import random
 import hashlib
-from .utils import sent_email, is_conflict, get_time_schedule
+from .utils import sent_email, is_conflict, get_time_schedule, popItem
 
 
 class Roles(models.Model):
@@ -100,6 +100,9 @@ class Users(models.Model):
 
     def remove(self):
         self.deleted = True
+        if self.roleID.roleName == "hcp":
+            hcp = Healthcareprofessional.objects.get(userID__userID=self.id)
+            hcp.remove()
         self.save()
 
     class Meta:
@@ -172,11 +175,11 @@ class Healthcareprofessional(models.Model):
         return schedules
 
     def add_schedule(self, startDate, startTime, endTime, requestID, numDaysRequested, daysRequested):
-        schedule = self.schedule
-        if not schedule:
-            schedule = {}
+        requestID = str(requestID)
+        if not self.schedule:
+            self.schedule = {}
         item = {
-            "id": 0,
+            "assignID": 0,
             "startDate": startDate,
             "startTime": startTime,
             'endTime': endTime,
@@ -184,38 +187,38 @@ class Healthcareprofessional(models.Model):
             "daysRequested": daysRequested
         }
 
-        if requestID in schedule:
-            schedule_id = schedule[requestID][-1]['id'] + 1
-            item['id'] = schedule_id
-            schedule[requestID].append(item)
+        if requestID in self.schedule:
+            schedule_id = self.schedule[requestID][-1]['assignID'] + 1
+            item['assignID'] = schedule_id
+            for s in self.schedule[requestID]:
+                if s['startDate'] == startDate and s['numDaysRequested'] == numDaysRequested and \
+                        (s['startTime'] == startTime and s['endTime'] == endTime):
+                    s['daysRequested'].extend(daysRequested)
+                    self.save()
+                    return s
+            self.schedule[requestID].append(item)
         else:
-            schedule[requestID] = [item]
-        self.schedule = schedule
+            self.schedule[requestID] = [item]
         self.save()
-        return item['id']
+        return item
 
-    def remove_schedule(self, requestID):
-        schedule = self.schedule
-        del schedule[str(requestID)]
-        self.schedule = schedule
-        self.save()
+    def remove_schedule(self, requestID, assignID):
+        requestID = str(requestID)
+        if requestID in self.schedule:
+            pop, new_array = popItem(self.schedule[requestID], lambda x: int(x['assignID'] == int(assignID)))
+            if pop:
+                if new_array:
+                    self.schedule[requestID] = new_array
+                else:
+                    del self.schedule[requestID]
+                self.save()
+                return 200, pop
+            return 404, {"error": "schedule does not exist"}
+        else:
+            return 404, {"error": "schedule does not exist"}
 
     class Meta:
         db_table = 'HealthcareProfessional'
-
-
-# class HcpSchedule(models.Model):
-#     # "startDate": startDate,
-#     #         "startTime": startTime,
-#     #         'endTime': endTime,
-#     #         "numDaysRequested": numDaysRequested,
-#     #         "daysRequested": daysRequested
-#     hcp = models.ForeignKey(Healthcareprofessional, on_delete=models.CASCADE)
-#     startDate = models.CharField(50)
-#     startTime = models.CharField(50)
-#     endTime = models.CharField(50)
-#     numDaysRequested = models.IntegerField()
-#     daysRequested = models.JSONField()
 
 
 class Requests(models.Model):
@@ -239,56 +242,53 @@ class Requests(models.Model):
         return f"Requests({self.requestID})"
 
     def assign(self, hcp, daysRequested, startTime, endTime):
-        distribution = self.distribution
-        unassigned_list = distribution['unassigned']
+        unassigned_list = self.distribution['unassigned']
         r = self.requirements
         for i in daysRequested:
             if i in unassigned_list:
-                del distribution['unassigned'][unassigned_list.index(i)]
+                del self.distribution['unassigned'][unassigned_list.index(i)]
             else:
-                return 400, {"error": f"daysRequested {i} has been assigned"}
-        s_id = hcp.add_schedule(r['startDate'], startTime, endTime, self.requestID, r['numDaysRequested'],
-                                daysRequested)
+                return 400, {"error": f"daysRequested {i} can not be assigned"}
+        schedule = hcp.add_schedule(r['startDate'], startTime, endTime, self.requestID, r['numDaysRequested'],
+                                    daysRequested)
+        for item in self.distribution['assigned']:
+            s = item['schedule']
+            if s['startDate'] == r['startDate'] and s['numDaysRequested'] == r['numDaysRequested'] and \
+                    (s['startTime'] == startTime and s['endTime'] == endTime):
+                s['daysRequested'].extend(daysRequested)
+                self.save()
+                return 200, item
         ret = {
-            "detail": {
-                "daysRequested": daysRequested,
-                "startTime": startTime,
-                "endTime": endTime,
-                "pID": hcp.pID
-            },
-            "schedule_id": s_id
+            "schedule": schedule,
+            "hcp": hcp.pID
         }
-        distribution['assigned'].append(ret)
-        self.distribution = distribution
+        self.distribution['assigned'].append(ret)
         self.save()
-        self.hcpID = hcp
         return 200, ret
 
-    def un_assign(self, hcp):
+    def is_start(self, hcp=None):
         pass
-        # distribution = self.distribution
-        # unassigned_list = distribution['unassigned']
-        # r = self.requirements
-        # for i in daysRequested:
-        #     if i in unassigned_list:
-        #         del distribution['unassigned'][unassigned_list.index(i)]
-        #     else:
-        #         return 400, {"error": f"daysRequested {i} has been assigned"}
-        # distribution['assigned'].append({
-        #     "detail": {
-        #         "daysRequested": daysRequested,
-        #         "startTime": startTime,
-        #         "endTime": endTime
-        #     },
-        #     "pID": hcp.pID
-        # })
+
+    def is_end(self):
+        pass
+
+    def un_assign(self, hcp: Healthcareprofessional, assignID):
+        status, results = hcp.remove_schedule(self.requestID, assignID)
+        if status != 404:
+            self.distribution['unassigned'].extend(results['daysRequested'])
+            pop, new_array = popItem(self.distribution['assigned'],
+                                     lambda x: int(x['schedule']['assignID']) == int(assignID))
+            if pop:
+                self.distribution['assigned'] = new_array
+                self.save()
+        return status, results
 
     def delete_hcp_schedule(self):
         assigned = self.distribution['assigned']
         for item in assigned:
-            hcp = Healthcareprofessional.objects.filter(pID=int(item['pID'])).first()
+            hcp = Healthcareprofessional.objects.filter(pID=int(item['hcp'])).first()
             if hcp:
-                hcp.remove_schedule(self.requestID)
+                hcp.remove_all_schedule(self.requestID)
 
     def check_requirements(self, hcp, requirements):
         available = True
@@ -343,8 +343,16 @@ class Requests(models.Model):
 
         return required_hcp_list
 
+    def remove_hcp_schedule(self):
+        for item in self.distribution['assigned']:
+            hcp = Healthcareprofessional.objects.get(pID=item['hcp'])
+            if str(self.requestID) in hcp.schedule:
+                del hcp.schedule[str(self.requestID)]
+                hcp.save()
+
     def remove(self):
         self.deleted = True
+        self.remove_hcp_schedule()
         self.save()
 
     class Meta:

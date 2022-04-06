@@ -22,6 +22,6 @@ urlpatterns = [
     re_path('^api/request/(.*?)/$', views.RequestView.as_view()),
     re_path('^api/available_hcp/(.*?)/$', views.AvailableHcpView.as_view()),
     path('api/assign/', views.AssignRequestView.as_view()),
-    path('api/unassign/', views.AssignRequestView.as_view()),
+    path('api/unassign/', views.UnAssignRequestView.as_view()),
     path('admin/', admin.site.urls),
 ]
