@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Users, Securityquestions, Caretaker, Healthcareprofessional, Advertise, Roles, Requests
+from .models import Users, Securityquestions, Caretaker, Healthcareprofessional, Advertise, ServiceRequest, Requests, WorkRecord
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -48,7 +48,25 @@ class AdvertiseSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class RequestsSerializer(serializers.ModelSerializer):
+class RequestListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Requests
+        fields = "__all__"
+
+
+class RequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Requests
+        fields = "__all__"
+
+
+class WorkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkRecord
+        fields = ['id', 'workDate', 'startTime', 'endTime', 'amount', 'hasPayed']
+
+
+class ServiceRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ServiceRequest
         fields = "__all__"

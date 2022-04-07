@@ -27,6 +27,13 @@ Password: <strong>{password}</strong>
         return False
 
 
+def timeFormat(time_input):
+    if isinstance(time_input, str):
+        h, s = time_input.split(":")
+        time_input = datetime.time(int(h), int(s))
+    return time_input
+
+
 def is_conflict(time_schedule1, time_schedule2):
     for h in time_schedule1:
         for c in time_schedule2:

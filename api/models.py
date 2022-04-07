@@ -2,7 +2,7 @@ from django.db import models
 import datetime
 import random
 import hashlib
-from .utils import sent_email, is_conflict, get_time_schedule, popItem
+from .utils import sent_email, is_conflict, get_time_schedule, popItem, timeFormat
 
 
 class Roles(models.Model):
@@ -164,6 +164,9 @@ class Healthcareprofessional(models.Model):
         self.deleted = True
         self.save()
 
+    def get_name(self):
+        return f"{self.firstName} {self.lastName}"
+
     def get_all_schedule(self):
         schedules = []
         if self.schedule:
@@ -174,12 +177,21 @@ class Healthcareprofessional(models.Model):
                                           item['startTime'], item['endTime'], False))
         return schedules
 
+    def has_schedule(self, requestID, scheduleID):
+        requestID = str(requestID)
+        if not self.schedule:
+            return False
+        if requestID not in self.schedule:
+            return False
+        schedules = self.schedule[requestID]
+        return len(list(filter(lambda x: int(x['scheduleID']) == int(scheduleID), schedules))) > 0
+
     def add_schedule(self, startDate, startTime, endTime, requestID, numDaysRequested, daysRequested):
         requestID = str(requestID)
         if not self.schedule:
             self.schedule = {}
         item = {
-            "assignID": 0,
+            "scheduleID": 0,
             "startDate": startDate,
             "startTime": startTime,
             'endTime': endTime,
@@ -188,8 +200,8 @@ class Healthcareprofessional(models.Model):
         }
 
         if requestID in self.schedule:
-            schedule_id = self.schedule[requestID][-1]['assignID'] + 1
-            item['assignID'] = schedule_id
+            schedule_id = self.schedule[requestID][-1]['scheduleID'] + 1
+            item['scheduleID'] = schedule_id
             for s in self.schedule[requestID]:
                 if s['startDate'] == startDate and s['numDaysRequested'] == numDaysRequested and \
                         (s['startTime'] == startTime and s['endTime'] == endTime):
@@ -202,10 +214,10 @@ class Healthcareprofessional(models.Model):
         self.save()
         return item
 
-    def remove_schedule(self, requestID, assignID):
+    def remove_schedule(self, requestID, scheduleID):
         requestID = str(requestID)
         if requestID in self.schedule:
-            pop, new_array = popItem(self.schedule[requestID], lambda x: int(x['assignID'] == int(assignID)))
+            pop, new_array = popItem(self.schedule[requestID], lambda x: int(x['scheduleID'] == int(scheduleID)))
             if pop:
                 if new_array:
                     self.schedule[requestID] = new_array
@@ -216,6 +228,31 @@ class Healthcareprofessional(models.Model):
             return 404, {"error": "schedule does not exist"}
         else:
             return 404, {"error": "schedule does not exist"}
+
+    def get_salary_info(self):
+        ret = {
+            "total": 0,
+            "payedTotal": 0,
+            "unPayedTotal": 0,
+            "hcp": {
+                "pID": self.pID,
+                "hcpName": self.get_name()
+            },
+            "detail": []
+        }
+        wcs = WorkRecord.objects.filter(hcp__pID=self.pID)
+        for wc in wcs:
+            ret['detail'].append({
+                "recordID": wc.id,
+                "salary": wc.salary,
+                "payedTime": wc.hcpPayedTime
+            })
+            if wc.hcpPayed:
+                ret['payedTotal'] += wc.salary
+            else:
+                ret['unPayedTotal'] += wc.salary
+            ret['total'] += wc.salary
+        return ret
 
     class Meta:
         db_table = 'HealthcareProfessional'
@@ -234,14 +271,16 @@ class Requests(models.Model):
     patientPhoneNumber = models.DecimalField(db_column='patientPhoneNumber', max_digits=10,
                                              decimal_places=0)  # Field name made lowercase.
     patientEmail = models.CharField(db_column='patientEmail', max_length=100)  # Field name made lowercase.
+    hourlyRate = models.FloatField(default=100.0)
     requirements = models.JSONField(default={})
     distribution = models.JSONField(default={})
     deleted = models.BooleanField(default=False)
+    end = models.BooleanField(null=True, blank=True)
 
     def __str__(self):
         return f"Requests({self.requestID})"
 
-    def assign(self, hcp, daysRequested, startTime, endTime):
+    def assign(self, hcp: Healthcareprofessional, daysRequested, startTime, endTime):
         unassigned_list = self.distribution['unassigned']
         r = self.requirements
         for i in daysRequested:
@@ -260,24 +299,28 @@ class Requests(models.Model):
                 return 200, item
         ret = {
             "schedule": schedule,
-            "hcp": hcp.pID
+            "hcp": hcp.pID,
+            "hcpName": hcp.get_name()
         }
         self.distribution['assigned'].append(ret)
         self.save()
         return 200, ret
 
-    def is_start(self, hcp=None):
-        pass
+    def end_request(self):
+        self.end = True
 
     def is_end(self):
-        pass
+        wcs_count = WorkRecord.objects.filter(request=self, hasPayed=False).count()
+        startDate = datetime.datetime.strptime(self.requirements['startDate'], "%Y-%m-%d")
+        endDate = startDate + datetime.timedelta(days=int(self.requirements['numDaysRequested']))
+        return wcs_count == 0 and datetime.datetime.now() > endDate
 
-    def un_assign(self, hcp: Healthcareprofessional, assignID):
-        status, results = hcp.remove_schedule(self.requestID, assignID)
+    def un_assign(self, hcp: Healthcareprofessional, scheduleID):
+        status, results = hcp.remove_schedule(self.requestID, scheduleID)
         if status != 404:
             self.distribution['unassigned'].extend(results['daysRequested'])
             pop, new_array = popItem(self.distribution['assigned'],
-                                     lambda x: int(x['schedule']['assignID']) == int(assignID))
+                                     lambda x: int(x['schedule']['scheduleID']) == int(scheduleID))
             if pop:
                 self.distribution['assigned'] = new_array
                 self.save()
@@ -355,6 +398,34 @@ class Requests(models.Model):
         self.remove_hcp_schedule()
         self.save()
 
+    def get_billing_account(self):
+        ret = {"detail": [], 'patientName': f"{self.patientFirstName} {self.patientLastName}"}
+        for assign in self.distribution['assigned']:
+            item = {
+                'hcpName': assign['hcpName'],
+                'pID': int(assign['hcp']),
+                'records': [],
+                'payedTotal': 0,
+                'unPayedTotal': 0
+            }
+            wcs = WorkRecord.objects.filter(hcp__pID=int(assign['hcp']), request_id=int(self.requestID))
+            for wc in wcs:
+                item['records'].append({
+                    "recordID": wc.id,
+                    "workDate": wc.workDate,
+                    "startTime": f"{wc.startTime.hour}:{wc.startTime.minute}",
+                    "endTime": f"{wc.endTime.hour}:{wc.endTime.minute}",
+                    "amount": wc.amount,
+                    "hasPayed": wc.hasPayed,
+                    "payedTime": wc.payedTime
+                })
+                if wc.hasPayed:
+                    item['payedTotal'] += wc.amount
+                else:
+                    item['unPayedTotal'] += wc.amount
+            ret['detail'].append(item)
+        return ret
+
     class Meta:
         db_table = 'Requests'
 
@@ -373,3 +444,50 @@ class Advertise(models.Model):
 
     class Meta:
         db_table = 'Advertise'
+
+
+class WorkRecord(models.Model):
+    request = models.ForeignKey(Requests, on_delete=models.CASCADE)
+    scheduleID = models.IntegerField()
+    hcp = models.ForeignKey(Healthcareprofessional, on_delete=models.CASCADE)
+    workDate = models.DateField()
+    startTime = models.TimeField()
+    endTime = models.TimeField()
+    amount = models.FloatField()
+    salary = models.FloatField(default=100)
+    hasPayed = models.BooleanField(default=False)
+    payedTime = models.DateTimeField(null=True, blank=True)
+    hcpPayed = models.BooleanField(default=False)
+    hcpPayedTime = models.DateTimeField(null=True, blank=True)
+    deleted = models.BooleanField(default=False)
+
+    @staticmethod
+    def cal_amount(startTime, endTime, hourlyRate=100):
+        startTime = timeFormat(startTime)
+        endTime = timeFormat(endTime)
+        duration = datetime.datetime.combine(datetime.date.today(), endTime) - datetime.datetime.combine(
+            datetime.date.today(), startTime)
+        hours = round(duration.seconds / 60 / 60, 2)
+        return round(float(hourlyRate) * hours, 2)
+
+    def remove(self):
+        self.deleted = True
+        self.save()
+
+    class Meta:
+        db_table = 'WorkRecord'
+
+
+class ServiceRequest(models.Model):
+    userTo = models.ForeignKey(Users, related_name="user_to", on_delete=models.CASCADE)
+    userFrom = models.ForeignKey(Users, related_name="user_from", on_delete=models.CASCADE)
+    request = models.ForeignKey(Requests, on_delete=models.CASCADE)
+    status = models.CharField(max_length=20, null=True, blank=True)
+    deleted = models.BooleanField(default=False)
+
+    def remove(self):
+        self.deleted = True
+        self.save()
+
+    class Meta:
+        db_table = 'ServiceRequest'

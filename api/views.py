@@ -1,9 +1,11 @@
+import datetime
 import hashlib
 from rest_framework.views import APIView
 from rest_framework.views import Response
-from .models import Users, Securityquestions, Caretaker, Healthcareprofessional, Advertise, Requests
+from .models import Users, Securityquestions, Caretaker, Healthcareprofessional, Advertise, Requests, WorkRecord, \
+    ServiceRequest
 from .serializers import UserSerializer, SecurityQuestionsSerializer, CareTakerSerializer, HcpSerializer, \
-    AdvertiseSerializer, RequestsSerializer
+    AdvertiseSerializer, RequestListSerializer, RequestSerializer, WorkSerializer, ServiceRequestSerializer
 from rest_framework.authentication import SessionAuthentication
 from .utils import is_conflict, get_time_schedule
 
@@ -185,6 +187,9 @@ class HealthCareProfessionalView(APIView):
     def delete(self, req, pk):
         hcp = Healthcareprofessional.objects.filter(pID=int(pk), deleted=False).first()
         if hcp:
+            if WorkRecord.objects.filter(hcp=hcp, hcpPayed=False).count() > 0:
+                return Response({"error": "Current Applicant has unpaid bills"})
+            hcp.userID.remove()
             hcp.remove()
             return Response({})
         return Response(data={'error': "Applicant does not exist"}, status=404)
@@ -283,7 +288,7 @@ class RequestsView(APIView):
         requests = Requests.objects.filter(deleted=False)
         if userID:
             requests = requests.filter(userID__userID=int(userID))
-        return Response(RequestsSerializer(requests, many=True).data, status=200)
+        return Response(RequestListSerializer(requests, many=True).data, status=200)
 
     def post(self, req):
         h_request = Requests()
@@ -294,7 +299,8 @@ class RequestsView(APIView):
         r = req.data.get("requirements")
         serviceType = r['serviceType']
         exist = Requests.objects.filter(patientFirstName=patientFirstName, patientLastName=patientLastName,
-                                        dateOfBirth=dateOfBirth, requirements__serviceType=serviceType).first()
+                                        dateOfBirth=dateOfBirth, requirements__serviceType=serviceType,
+                                        deleted=False).first()
         startDate = r['startDate']
         numDaysRequested = r['numDaysRequested']
         daysRequested = r['daysRequested']
@@ -328,7 +334,7 @@ class RequestView(APIView):
     def get(self, req, pk):
         _requests = Requests.objects.filter(requestID=int(pk), deleted=False).first()
         if _requests:
-            return Response(RequestsSerializer(_requests).data, status=200)
+            return Response(RequestListSerializer(_requests).data, status=200)
         else:
             return Response({'error': 'Requests does not exist'}, status=404)
 
@@ -385,7 +391,7 @@ class UnAssignRequestView(APIView):
     def post(self, req):
         requestID = req.data.get("requestID")
         pID = req.data.get('pID')
-        assignID = req.data.get('assignID')
+        scheduleID = req.data.get('scheduleID')
         _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
         hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
         if not _requests:
@@ -395,7 +401,7 @@ class UnAssignRequestView(APIView):
         if not hcp.enroll:
             return Response({'error': 'The current hcp is not enrolled'}, status=400)
 
-        status, results = _requests.un_assign(hcp, assignID)
+        status, results = _requests.un_assign(hcp, scheduleID)
         return Response(results, status=status)
 
 
@@ -411,3 +417,132 @@ class AvailableHcpView(APIView):
             return Response(
                 data=HcpSerializer(_request.get_available_hcp(startTime, endTime, daysRequested), many=True).data)
         return Response({"error": "requests does not exist"}, 404)
+
+
+class ScheduleView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
+    def get(self, req, pID):
+        hcp = Healthcareprofessional.objects.filter(pID=int(pID)).first()
+        if hcp:
+            ret = []
+            schedules = hcp.schedule
+            for k, v in schedules.items():
+                _request = Requests.objects.get(requestID=int(k))
+                _request = RequestSerializer(_request).data
+                _request['schedule'] = v
+                ret.append(_request)
+            return Response(ret, 200)
+        else:
+            return Response({"error": "Hcp does not exist"}, 404)
+
+
+class WorkView(APIView):
+    authentication_classes = (UnsafeSessionAuthentication,)
+
+    def post(self, req):
+        requestID = req.data.get("requestID", -1)
+        pID = req.data.get('pID', -1)
+        scheduleID = req.data.get('scheduleID', -1)
+        workDate = req.data.get("workDate")
+        startTime = req.data.get('startTime')
+        endTime = req.data.get('endTime')
+        _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
+        hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
+        if not _requests:
+            return Response({'error': 'Requests does not exist'}, status=404)
+        if not hcp:
+            return Response({'error': 'Hcp does not exist'}, status=404)
+        if not hcp.enroll:
+            return Response({'error': 'The current hcp is not enrolled'}, status=400)
+        if not hcp.has_schedule(requestID, scheduleID):
+            return Response({'error': 'The scheduleID is invalid'}, status=400)
+        if WorkRecord.objects.filter(hcp=hcp, request=_requests, scheduleID=int(scheduleID), workDate=workDate).first():
+            return Response({'error': 'Work record already exists'}, status=400)
+        hourlyRate = _requests.hourlyRate
+        work = WorkRecord()
+        work.hcp = hcp
+        work.request = _requests
+        work.scheduleID = scheduleID
+        work.amount = work.cal_amount(startTime, endTime, hourlyRate)
+        work.startTime = startTime
+        work.endTime = endTime
+        work.workDate = workDate
+        work.salary = work.cal_amount(startTime, endTime, _requests.requirements['salary'])
+        work.save()
+        return Response(WorkSerializer(work).data, 200)
+
+
+class BillingAccountListView(APIView):
+    def get(self, req):
+        ret = []
+        _requestsList = Requests.objects.filter(deleted=False)
+        for _requests in _requestsList:
+            ret.append(_requests.get_billing_account())
+        return Response(ret, 200)
+
+
+class BillingAccountView(APIView):
+    def get(self, req, requestID):
+        _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
+        if not _requests:
+            return Response({'error': 'Requests does not exist'}, status=404)
+        ret = _requests.get_billing_account()
+        return Response(ret, 200)
+
+
+class HcpBillingListView(APIView):
+    def get(self, req):
+        ret = []
+        hcpList = Healthcareprofessional.objects.filter(enroll=True, deleted=False)
+        for hcp in hcpList:
+            ret.append(hcp.get_salary_info())
+        return Response(ret, 200)
+
+
+class HcpBillingView(APIView):
+    def get(self, req, pID):
+        hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
+        if not hcp:
+            return Response({'error': 'Hcp does not exist'}, status=404)
+        if not hcp.enroll:
+            return Response({'error': 'The current hcp is not enrolled'}, status=400)
+        ret = hcp.get_salary_info()
+        return Response(ret, 200)
+
+
+class BillingPayView(APIView):
+    def get(self, req, recordID):
+        record = WorkRecord.objects.filter(id=int(recordID)).first()
+        if not record:
+            return Response({'error': 'Record does not exist'}, status=404)
+        record.hasPayed = True
+        record.payedTime = datetime.datetime.now()
+        record.save()
+        return Response({}, 200)
+
+
+class HcpPayView(APIView):
+    def get(self, req, recordID):
+        record = WorkRecord.objects.filter(id=int(recordID)).first()
+        if not record:
+            return Response({'error': 'Record does not exist'}, status=404)
+        record.hcpPayed = True
+        record.hcpPayedTime = datetime.datetime.now()
+        record.save()
+        return Response({}, 200)
+
+
+class ServiceRequestView(APIView):
+    def get(self, req):
+        servicesInfo = ServiceRequest.objects.filter(deleted=False)
+        userTo = req.query_params.get("userTo", None)
+        if userTo:
+            servicesInfo = servicesInfo.filter(userTo__userID=int(userTo))
+        userFrom = req.query_params.get("userFrom", None)
+        if userFrom:
+            servicesInfo = servicesInfo.filter(userFrom__userID=int(userFrom))
+        return Response(ServiceRequestSerializer(servicesInfo, many=True).data, 200)
+
+    def post(self):
+        pass
