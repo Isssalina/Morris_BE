@@ -413,8 +413,8 @@ class Requests(models.Model):
                 item['records'].append({
                     "recordID": wc.id,
                     "workDate": wc.workDate,
-                    "startTime": f"{wc.startTime.hour}:{wc.startTime.minute}",
-                    "endTime": f"{wc.endTime.hour}:{wc.endTime.minute}",
+                    "startTime":wc.startTime.strftime("%H:%M"),
+                    "endTime": wc.endTime.strftime("%H:%M"),
                     "amount": wc.amount,
                     "hasPayed": wc.hasPayed,
                     "payedTime": wc.payedTime
