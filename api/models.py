@@ -311,10 +311,26 @@ class Requests(models.Model):
         self.save()
 
     def is_end(self):
+        if self.end:
+            return True
         wcs_count = self.get_billing_count()
         startDate = datetime.datetime.strptime(self.requirements['startDate'], "%Y-%m-%d")
         endDate = startDate + datetime.timedelta(days=int(self.requirements['numDaysRequested']))
         return wcs_count == 0 and datetime.datetime.now() > endDate
+
+    def get_status(self):
+        """
+        0:not start
+        1:start
+        2:end
+        """
+        startDate = datetime.datetime.strptime(self.requirements['startDate'], "%Y-%m-%d")
+        if startDate > datetime.datetime.now():
+            return 0
+        elif self.is_end():
+            return 2
+        else:
+            return 1
 
     def get_billing_count(self):
         return WorkRecord.objects.filter(request=self, hasPayed=False).count()
@@ -486,7 +502,7 @@ class ServiceRequest(models.Model):
     userTo = models.ForeignKey(Users, related_name="user_to", on_delete=models.CASCADE)
     userFrom = models.ForeignKey(Users, related_name="user_from", on_delete=models.CASCADE)
     request = models.ForeignKey(Requests, on_delete=models.CASCADE)
-    status = models.CharField(max_length=20, null=True, blank=True)
+    status = models.IntegerField(null=True, blank=True, help_text="0:申请,1:驳回,2:成功")
     deleted = models.BooleanField(default=False)
 
     def remove(self):

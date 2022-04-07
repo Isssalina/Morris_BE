@@ -544,8 +544,39 @@ class ServiceRequestView(APIView):
             servicesInfo = servicesInfo.filter(userFrom__userID=int(userFrom))
         return Response(ServiceRequestSerializer(servicesInfo, many=True).data, 200)
 
-    def post(self):
-        pass
+    def post(self, req):
+        userFrom = req.data.get('userFrom', None)
+        userTo = req.data.get('userTo', None)
+        requestID = req.data.get("requestID", None)
+        status = req.data.get("status", 0)
+        _request = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
+        userFrom = Users.objects.filter(userID=int(userFrom), deleted=False).first()
+        userTo = Users.objects.filter(userID=int(userTo), deleted=False).first()
+        if not _request:
+            return Response({'error': 'Request does not exist'}, status=404)
+        if not userFrom:
+            return Response({'error': 'userFrom does not exist'}, status=404)
+        if not userTo:
+            return Response({'error': 'userTo does not exist'}, status=404)
+        s = ServiceRequest()
+        s.userFrom = userFrom
+        s.userTo = userTo
+        s.request = _request
+        s.status = int(status)
+        s.save()
+        return Response({"id": s.id}, 200)
+
+    def put(self, req):
+        serviceID = req.data.get("serviceID", -1)
+        status = req.data.get("status", 0)
+        service = ServiceRequest.objects.filter(pk=int(serviceID), deleted=False).first()
+        if not service:
+            return Response({'error': 'Service request does not exist'}, status=404)
+        service.status = status
+        if int(status) == 2:  # success
+            if service.request.get_billing_count() == 0:
+                service.request.end_request()
+        service.save()
 
 
 class EndRequestView(APIView):

@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Users, Securityquestions, Caretaker, Healthcareprofessional, Advertise, ServiceRequest, Requests, WorkRecord
+from .models import Users, Securityquestions, Caretaker, Healthcareprofessional, Advertise, ServiceRequest, Requests, \
+    WorkRecord
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -49,6 +50,11 @@ class AdvertiseSerializer(serializers.ModelSerializer):
 
 
 class RequestListSerializer(serializers.ModelSerializer):
+    end = serializers.SerializerMethodField()
+
+    def get_end(self, obj):
+        return obj.get_status()
+
     class Meta:
         model = Requests
         fields = "__all__"
