@@ -32,5 +32,6 @@ urlpatterns = [
     re_path('^api/pay/billing/(.*?)/$', views.BillingPayView.as_view()),
     re_path('^api/pay/hcp/(.*?)/$', views.HcpPayView.as_view()),
     path('api/service/', views.ServiceRequestView.as_view()),
+    re_path('^api/end_request/(.*?)/$', views.EndRequestView.as_view()),
     path('admin/', admin.site.urls),
 ]

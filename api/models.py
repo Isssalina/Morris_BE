@@ -308,12 +308,16 @@ class Requests(models.Model):
 
     def end_request(self):
         self.end = True
+        self.save()
 
     def is_end(self):
-        wcs_count = WorkRecord.objects.filter(request=self, hasPayed=False).count()
+        wcs_count = self.get_billing_count()
         startDate = datetime.datetime.strptime(self.requirements['startDate'], "%Y-%m-%d")
         endDate = startDate + datetime.timedelta(days=int(self.requirements['numDaysRequested']))
         return wcs_count == 0 and datetime.datetime.now() > endDate
+
+    def get_billing_count(self):
+        return WorkRecord.objects.filter(request=self, hasPayed=False).count()
 
     def un_assign(self, hcp: Healthcareprofessional, scheduleID):
         status, results = hcp.remove_schedule(self.requestID, scheduleID)
@@ -413,7 +417,7 @@ class Requests(models.Model):
                 item['records'].append({
                     "recordID": wc.id,
                     "workDate": wc.workDate,
-                    "startTime":wc.startTime.strftime("%H:%M"),
+                    "startTime": wc.startTime.strftime("%H:%M"),
                     "endTime": wc.endTime.strftime("%H:%M"),
                     "amount": wc.amount,
                     "hasPayed": wc.hasPayed,

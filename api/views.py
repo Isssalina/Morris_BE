@@ -468,7 +468,7 @@ class WorkView(APIView):
         work.startTime = startTime
         work.endTime = endTime
         work.workDate = workDate
-        work.salary = work.cal_amount(startTime, endTime, _requests.requirements['salary'])
+        work.salary = work.cal_amount(startTime, endTime, hcp.salary)
         work.save()
         return Response(WorkSerializer(work).data, 200)
 
@@ -546,3 +546,14 @@ class ServiceRequestView(APIView):
 
     def post(self):
         pass
+
+
+class EndRequestView(APIView):
+    def get(self, req, requestID):
+        _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
+        if not _requests:
+            return Response({'error': 'Requests does not exist'}, status=404)
+        if _requests.get_billing_count() > 0:
+            return Response({'error': 'The current Request has unpaid bills'}, status=400)
+        _requests.end_request()
+        return Response({}, 200)
