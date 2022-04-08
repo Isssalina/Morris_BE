@@ -470,9 +470,7 @@ class WorkView(APIView):
         work.workDate = workDate
         work.salary = work.cal_amount(startTime, endTime, hcp.salary)
         work.save()
-        data = WorkSerializer(work).data
-        data['recordID'] = data['id'] + 1000
-        del data['id']
+        data=WorkSerializer(work).data
         return Response(data, 200)
 
 
