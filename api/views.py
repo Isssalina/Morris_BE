@@ -172,7 +172,7 @@ class HealthCareProfessionalsView(APIView):
         hcp.advertiseID = ad
         hcp.enroll = False
         hcp.save()
-        return Response({"pID":hcp.pID}, status=200)
+        return Response({"pID":Healthcareprofessional.objects.last().pID}, status=200)
 
 
 class HealthCareProfessionalView(APIView):
