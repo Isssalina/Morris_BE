@@ -470,7 +470,10 @@ class WorkView(APIView):
         work.workDate = workDate
         work.salary = work.cal_amount(startTime, endTime, hcp.salary)
         work.save()
-        return Response(WorkSerializer(work).data, 200)
+        data = WorkSerializer(work).data
+        data['recordID'] = data['id'] + 1000
+        del data['id']
+        return Response(data, 200)
 
 
 class BillingAccountListView(APIView):
@@ -513,7 +516,7 @@ class HcpBillingView(APIView):
 
 class BillingPayView(APIView):
     def get(self, req, recordID):
-        record = WorkRecord.objects.filter(id=int(recordID)).first()
+        record = WorkRecord.objects.filter(id=int(recordID) - 1000).first()
         if not record:
             return Response({'error': 'Record does not exist'}, status=404)
         record.hasPayed = True
@@ -524,7 +527,7 @@ class BillingPayView(APIView):
 
 class HcpPayView(APIView):
     def get(self, req, recordID):
-        record = WorkRecord.objects.filter(id=int(recordID)).first()
+        record = WorkRecord.objects.filter(id=int(recordID) - 1000).first()
         if not record:
             return Response({'error': 'Record does not exist'}, status=404)
         record.hcpPayed = True

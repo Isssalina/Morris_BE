@@ -243,7 +243,7 @@ class Healthcareprofessional(models.Model):
         wcs = WorkRecord.objects.filter(hcp__pID=self.pID)
         for wc in wcs:
             ret['detail'].append({
-                "recordID": wc.id,
+                "recordID": 1000 + wc.id,
                 "salary": wc.salary,
                 "payedTime": wc.hcpPayedTime
             })
@@ -271,7 +271,7 @@ class Requests(models.Model):
     patientPhoneNumber = models.DecimalField(db_column='patientPhoneNumber', max_digits=10,
                                              decimal_places=0)  # Field name made lowercase.
     patientEmail = models.CharField(db_column='patientEmail', max_length=100)  # Field name made lowercase.
-    hourlyRate = models.FloatField(default=100.0,null=True,blank=True)
+    hourlyRate = models.FloatField(default=100.0, null=True, blank=True)
     requirements = models.JSONField(default={})
     distribution = models.JSONField(default={})
     deleted = models.BooleanField(default=False)
@@ -432,7 +432,7 @@ class Requests(models.Model):
             wcs = WorkRecord.objects.filter(hcp__pID=int(assign['hcp']), request_id=int(self.requestID))
             for wc in wcs:
                 item['records'].append({
-                    "recordID": wc.id,
+                    "recordID": 1000 + wc.id,
                     "workDate": wc.workDate,
                     "startTime": wc.startTime.strftime("%H:%M"),
                     "endTime": wc.endTime.strftime("%H:%M"),
