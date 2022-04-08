@@ -13,7 +13,13 @@ class UserSerializer(serializers.ModelSerializer):
                 "type": obj.roleID.roleName,
                 "pID": relateID
             }
-        return obj.roleID.roleName,
+        if obj.roleID.roleName == "ct":
+            relateID = Caretaker.objects.get(userID__userID=obj.userID).pID
+            return {
+                "type": obj.roleID.roleName,
+                "takerID": relateID
+            }
+        return obj.roleID.roleName
 
     class Meta:
         model = Users
