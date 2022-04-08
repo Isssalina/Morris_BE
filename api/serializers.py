@@ -7,7 +7,13 @@ class UserSerializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
 
     def get_role(self, obj):
-        return obj.roleID.roleName
+        if obj.roleID.roleName == "hcp":
+            relateID = Healthcareprofessional.objects.get(userID__userID=obj.userID).pID
+            return {
+                "type": obj.roleID.roleName,
+                "pID": relateID
+            }
+        return obj.roleID.roleName,
 
     class Meta:
         model = Users
