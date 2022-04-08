@@ -271,7 +271,7 @@ class Requests(models.Model):
     patientPhoneNumber = models.DecimalField(db_column='patientPhoneNumber', max_digits=10,
                                              decimal_places=0)  # Field name made lowercase.
     patientEmail = models.CharField(db_column='patientEmail', max_length=100)  # Field name made lowercase.
-    hourlyRate = models.FloatField(default=100.0)
+    hourlyRate = models.FloatField(default=100.0,null=True,blank=True)
     requirements = models.JSONField(default={})
     distribution = models.JSONField(default={})
     deleted = models.BooleanField(default=False)
@@ -396,6 +396,7 @@ class Requests(models.Model):
             startTime = requirements['startTime']
         if not endTime:
             endTime = requirements['endTime']
+
         current_schedule = get_time_schedule(startDate, numDaysRequested, daysRequested, startTime, endTime,
                                              flexibleTime)
         for hcp in hcp_list:
