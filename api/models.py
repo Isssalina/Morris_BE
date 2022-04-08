@@ -101,7 +101,7 @@ class Users(models.Model):
     def remove(self):
         self.deleted = True
         if self.roleID.roleName == "hcp":
-            hcp = Healthcareprofessional.objects.get(userID__userID=self.id)
+            hcp = Healthcareprofessional.objects.get(userID__userID=self.userID)
             hcp.remove()
         self.save()
 
