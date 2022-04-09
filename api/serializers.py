@@ -14,7 +14,7 @@ class UserSerializer(serializers.ModelSerializer):
                 "pID": relateID
             }
         if obj.roleID.roleName == "ct":
-            relateID = Caretaker.objects.get(userID__userID=obj.userID).pID
+            relateID = Caretaker.objects.get(userID__userID=obj.userID).takerID
             return {
                 "type": obj.roleID.roleName,
                 "takerID": relateID
