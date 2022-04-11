@@ -3,7 +3,7 @@ import hashlib
 from rest_framework.views import APIView
 from rest_framework.views import Response
 from .models import Users, Securityquestions, Caretaker, Healthcareprofessional, Advertise, Requests, WorkRecord, \
-    ServiceRequest
+    ServiceRequest, BillingAccount, PayRecord
 from .serializers import UserSerializer, SecurityQuestionsSerializer, CareTakerSerializer, HcpSerializer, \
     AdvertiseSerializer, RequestListSerializer, RequestSerializer, WorkSerializer, ServiceRequestSerializer
 from rest_framework.authentication import SessionAuthentication
@@ -154,12 +154,13 @@ class HealthCareProfessionalsView(APIView):
     authentication_classes = (UnsafeSessionAuthentication,)
 
     def get(self, req, appID=None):
-        enroll = req.GET.get("enroll", False)
-        enroll = True if enroll == "1" else False
+        enroll = req.GET.get("enroll", "0")
         if appID:
             hcp = Healthcareprofessional.objects.filter(advertiseID__adID=int(appID), enroll=False, deleted=False)
         else:
-            hcp = Healthcareprofessional.objects.filter(deleted=False, enroll=enroll)
+            hcp = Healthcareprofessional.objects.filter(deleted=False)
+            if enroll == "1":
+                hcp = hcp.filter(enroll=True)
         return Response(data=HcpSerializer(hcp, many=True).data, status=200)
 
     def post(self, req, appID=None):
@@ -172,7 +173,7 @@ class HealthCareProfessionalsView(APIView):
         hcp.advertiseID = ad
         hcp.enroll = False
         hcp.save()
-        return Response({"pID":Healthcareprofessional.objects.last().pID}, status=200)
+        return Response({"pID": Healthcareprofessional.objects.last().pID}, status=200)
 
 
 class HealthCareProfessionalView(APIView):
@@ -248,8 +249,8 @@ class HcpApproveView(APIView):
     # approve
     def get(self, req, pID):
         hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
-        ad = hcp.advertiseID
-        if hcp and ad:
+        if hcp:
+            ad = hcp.advertiseID
             if not hcp.enroll:
                 hcp.enroll = True
                 user = Users()
@@ -443,34 +444,27 @@ class WorkView(APIView):
     def post(self, req):
         requestID = req.data.get("requestID", -1)
         pID = req.data.get('pID', -1)
-        scheduleID = req.data.get('scheduleID', -1)
         workDate = req.data.get("workDate")
         startTime = req.data.get('startTime')
         endTime = req.data.get('endTime')
-        _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
+        _request = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
         hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
-        if not _requests:
+        if not _request:
             return Response({'error': 'Requests does not exist'}, status=404)
         if not hcp:
             return Response({'error': 'Hcp does not exist'}, status=404)
         if not hcp.enroll:
             return Response({'error': 'The current hcp is not enrolled'}, status=400)
-        if not hcp.has_schedule(requestID, scheduleID):
+        if not hcp.has_schedule(requestID):
             return Response({'error': 'The scheduleID is invalid'}, status=400)
-        if WorkRecord.objects.filter(hcp=hcp, request=_requests, scheduleID=int(scheduleID), workDate=workDate).first():
+        if WorkRecord.objects.filter(hcp=hcp, request=_request, workDate=workDate).first():
             return Response({'error': 'Work record already exists'}, status=400)
-        hourlyRate = _requests.hourlyRate
-        work = WorkRecord()
-        work.hcp = hcp
-        work.request = _requests
-        work.scheduleID = scheduleID
-        work.amount = work.cal_amount(startTime, endTime, hourlyRate)
-        work.startTime = startTime
-        work.endTime = endTime
-        work.workDate = workDate
-        work.salary = work.cal_amount(startTime, endTime, hcp.salary)
+        work = WorkRecord.objects.create(hcp=hcp, request=_request, startTime=startTime, endTime=endTime,
+                                         workDate=workDate)
+        data = WorkSerializer(work).data
         work.save()
-        data=WorkSerializer(work).data
+        work.add_billing_account()
+        work.add_hcp_salary()
         return Response(data, 200)
 
 
@@ -513,25 +507,26 @@ class HcpBillingView(APIView):
 
 
 class BillingPayView(APIView):
-    def get(self, req, recordID):
-        record = WorkRecord.objects.filter(id=int(recordID) - 1000).first()
-        if not record:
-            return Response({'error': 'Record does not exist'}, status=404)
-        record.hasPayed = True
-        record.payedTime = datetime.datetime.now()
-        record.save()
-        return Response({}, 200)
-
-
-class HcpPayView(APIView):
-    def get(self, req, recordID):
-        record = WorkRecord.objects.filter(id=int(recordID) - 1000).first()
-        if not record:
-            return Response({'error': 'Record does not exist'}, status=404)
-        record.hcpPayed = True
-        record.hcpPayedTime = datetime.datetime.now()
-        record.save()
-        return Response({}, 200)
+    def post(self, req):
+        billingAccountID = req.data.get("billingAccountID", None)
+        amount = req.data.get("amount", None)
+        if billingAccountID and amount:
+            billing = BillingAccount.objects.filter(pk=int(billingAccountID) - 1000).first()
+            if not billing:
+                return Response({'error': 'Billing account does not exist'}, status=404)
+            amount = float(amount)
+            if amount <= 0:
+                return Response({'error': 'The amount must be greater than 0'}, status=404)
+            if amount >= billing.unpaid:
+                amount = billing.unpaid
+            billing.unpaid -= amount
+            billing.paid += amount
+            billing.save()
+            payRecord = PayRecord.objects.create(billingAccount=billing, amount=amount)
+            payRecord.save()
+            return Response({"billingAccountID": billingAccountID, "total": billing.total, "paid": billing.paid,
+                             "unpaid": billing.unpaid}, 200)
+        return Response({"error": "[billingAccountID] and [amount] field is required "}, 200)
 
 
 class ServiceRequestView(APIView):

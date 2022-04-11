@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Caretaker, Healthcareprofessional, Requests, Roles, Securityquestions, Users, WorkRecord
+from .models import Caretaker, Healthcareprofessional, Requests, Roles, Securityquestions, Users, WorkRecord, Advertise, \
+    BillingAccount, PayRecord
 
 
 class CaretakerAdmin(admin.ModelAdmin):
@@ -25,3 +26,6 @@ admin.site.register(Roles, RolesAdmin)
 admin.site.register(Securityquestions, SecurityquestionsAdmin)
 admin.site.register(Users, UsersAdmin)
 admin.site.register(WorkRecord)
+admin.site.register(Advertise)
+admin.site.register(BillingAccount)
+admin.site.register(PayRecord)

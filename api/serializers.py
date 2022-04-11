@@ -79,9 +79,14 @@ class RequestSerializer(serializers.ModelSerializer):
 
 
 class WorkSerializer(serializers.ModelSerializer):
+    amount = serializers.SerializerMethodField()
+
+    def get_amount(self, obj):
+        return obj.cal_amount(obj.request.hourlyRate)
+
     class Meta:
         model = WorkRecord
-        fields = ['id', 'workDate', 'startTime', 'endTime', 'amount', 'hasPayed']
+        fields = ['id', 'workDate', 'startTime', 'endTime', 'amount']
 
 
 class ServiceRequestSerializer(serializers.ModelSerializer):
