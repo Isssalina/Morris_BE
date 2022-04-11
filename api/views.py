@@ -432,6 +432,7 @@ class ScheduleView(APIView):
                 _request = Requests.objects.get(requestID=int(k))
                 _request = RequestSerializer(_request).data
                 _request['schedule'] = v
+                _request['workDates'] = WorkRecord.objects.filter(request=_request, hcp=hcp).values("workDate")
                 ret.append(_request)
             return Response(ret, 200)
         else:
