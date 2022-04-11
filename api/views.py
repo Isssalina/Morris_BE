@@ -430,10 +430,10 @@ class ScheduleView(APIView):
             schedules = hcp.schedule
             for k, v in schedules.items():
                 _request = Requests.objects.get(requestID=int(k))
-                _request = RequestSerializer(_request).data
-                _request['schedule'] = v
-                _request['workDates'] = WorkRecord.objects.filter(request=_request, hcp=hcp).values("workDate")
-                ret.append(_request)
+                _request_data = RequestSerializer(_request).data
+                _request_data['schedule'] = v
+                _request_data['workDates'] =[x.workDate for x in WorkRecord.objects.filter(request=_request, hcp=hcp)]
+                ret.append(_request_data)
             return Response(ret, 200)
         else:
             return Response({"error": "Hcp does not exist"}, 404)
