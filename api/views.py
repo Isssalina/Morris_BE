@@ -3,7 +3,7 @@ import hashlib
 from rest_framework.views import APIView
 from rest_framework.views import Response
 from .models import Users, Securityquestions, Caretaker, Healthcareprofessional, Advertise, Requests, WorkRecord, \
-    ServiceRequest, BillingAccount, PayRecord
+    ServiceRequest
 from .serializers import UserSerializer, SecurityQuestionsSerializer, CareTakerSerializer, HcpSerializer, \
     AdvertiseSerializer, RequestListSerializer, RequestSerializer, WorkSerializer, ServiceRequestSerializer
 from rest_framework.authentication import SessionAuthentication
@@ -188,7 +188,7 @@ class HealthCareProfessionalView(APIView):
     def delete(self, req, pk):
         hcp = Healthcareprofessional.objects.filter(pID=int(pk), deleted=False).first()
         if hcp:
-            if WorkRecord.objects.filter(hcp=hcp, hcpPayed=False).count() > 0:
+            if hcp.billingAccount['unPaidTotal'] != 0:
                 return Response({"error": "Current Applicant has unpaid bills"})
             hcp.userID.remove()
             hcp.remove()
@@ -286,9 +286,12 @@ class RequestsView(APIView):
 
     def get(self, req):
         userID = req.query_params.get("userID", None)
+        end = req.query_params.get("end", None)
         requests = Requests.objects.filter(deleted=False)
         if userID:
             requests = requests.filter(userID__userID=int(userID))
+        if end:
+            requests = requests.filter(end=int(end))
         return Response(RequestListSerializer(requests, many=True).data, status=200)
 
     def post(self, req):
@@ -432,7 +435,7 @@ class ScheduleView(APIView):
                 _request = Requests.objects.get(requestID=int(k))
                 _request_data = RequestSerializer(_request).data
                 _request_data['schedule'] = v
-                _request_data['workDates'] =[x.workDate for x in WorkRecord.objects.filter(request=_request, hcp=hcp)]
+                _request_data['workDates'] = [x.workDate for x in WorkRecord.objects.filter(request=_request, hcp=hcp)]
                 ret.append(_request_data)
             return Response(ret, 200)
         else:
@@ -457,15 +460,15 @@ class WorkView(APIView):
         if not hcp.enroll:
             return Response({'error': 'The current hcp is not enrolled'}, status=400)
         if not hcp.has_schedule(requestID):
-            return Response({'error': 'The scheduleID is invalid'}, status=400)
+            return Response({'error': 'The current request is not assigned to this HCP'}, status=400)
         if WorkRecord.objects.filter(hcp=hcp, request=_request, workDate=workDate).first():
             return Response({'error': 'Work record already exists'}, status=400)
         work = WorkRecord.objects.create(hcp=hcp, request=_request, startTime=startTime, endTime=endTime,
                                          workDate=workDate)
         data = WorkSerializer(work).data
         work.save()
-        work.add_billing_account()
-        work.add_hcp_salary()
+        hcp.update_billing(work.cal_amount(hcp.salary), False)
+        _request.update_billing(work.cal_amount(_request.hourlyRate), False)
         return Response(data, 200)
 
 
@@ -480,10 +483,10 @@ class BillingAccountListView(APIView):
 
 class BillingAccountView(APIView):
     def get(self, req, requestID):
-        _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
-        if not _requests:
+        _request = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
+        if not _request:
             return Response({'error': 'Requests does not exist'}, status=404)
-        ret = _requests.get_billing_account()
+        ret = _request.get_billing_account()
         return Response(ret, 200)
 
 
@@ -507,27 +510,48 @@ class HcpBillingView(APIView):
         return Response(ret, 200)
 
 
-class BillingPayView(APIView):
-    def post(self, req):
-        billingAccountID = req.data.get("billingAccountID", None)
+class HcpPayView(APIView):
+    def post(self, req, pID):
+        hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
+        if not hcp:
+            return Response({'error': 'Hcp does not exist'}, status=404)
         amount = req.data.get("amount", None)
-        if billingAccountID and amount:
-            billing = BillingAccount.objects.filter(pk=int(billingAccountID) - 1000).first()
-            if not billing:
-                return Response({'error': 'Billing account does not exist'}, status=404)
-            amount = float(amount)
+        if amount:
             if amount <= 0:
                 return Response({'error': 'The amount must be greater than 0'}, status=404)
-            if amount >= billing.unpaid:
-                amount = billing.unpaid
-            billing.unpaid -= amount
-            billing.paid += amount
-            billing.save()
-            payRecord = PayRecord.objects.create(billingAccount=billing, amount=amount)
-            payRecord.save()
-            return Response({"billingAccountID": billingAccountID, "total": billing.total, "paid": billing.paid,
-                             "unpaid": billing.unpaid}, 200)
-        return Response({"error": "[billingAccountID] and [amount] field is required "}, 200)
+            if amount >= hcp.billingAccount['unPaidTotal']:
+                amount = hcp.billingAccount['unPaidTotal']
+            hcp.update_billing(amount)
+            return Response({
+                "amount": amount,
+                "total": hcp.billingAccount['total'],
+                "paidTotal": hcp.billingAccount['paidTotal'],
+                "unPaidTotal": hcp.billingAccount['unPaidTotal'],
+            }, 200)
+        else:
+            return Response({"error": "[amount] field is required "}, 200)
+
+
+class PayView(APIView):
+    def post(self, req, requestID):
+        _request = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
+        if not _request:
+            return Response({'error': 'Request does not exist'}, status=404)
+        amount = req.data.get("amount", None)
+        if amount:
+            if amount <= 0:
+                return Response({'error': 'The amount must be greater than 0'}, status=404)
+            if amount >= _request.billingAccount['unPaidTotal']:
+                amount = _request.billingAccount['unPaidTotal']
+            _request.update_billing(amount)
+            return Response({
+                "amount": amount,
+                "total": _request.billingAccount['total'],
+                "paidTotal": _request.billingAccount['paidTotal'],
+                "unPaidTotal": _request.billingAccount['unPaidTotal'],
+            }, 200)
+        else:
+            return Response({"error": "[amount] field is required "}, 400)
 
 
 class ServiceRequestView(APIView):
@@ -545,12 +569,14 @@ class ServiceRequestView(APIView):
         userFrom = req.data.get('userFrom', None)
         userTo = req.data.get('userTo', None)
         requestID = req.data.get("requestID", None)
-        status = req.data.get("status", 0)
         _request = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
         userFrom = Users.objects.filter(userID=int(userFrom), deleted=False).first()
         userTo = Users.objects.filter(userID=int(userTo), deleted=False).first()
         if not _request:
             return Response({'error': 'Request does not exist'}, status=404)
+        status, results = _request.is_end()
+        if status != 200:
+            return Response(results, status)
         if not userFrom:
             return Response({'error': 'userFrom does not exist'}, status=404)
         if not userTo:
@@ -559,21 +585,21 @@ class ServiceRequestView(APIView):
         s.userFrom = userFrom
         s.userTo = userTo
         s.request = _request
-        s.status = int(status)
+        s.status = "pending"
         s.save()
-        return Response({"id": s.id}, 200)
+        return Response({"status": s.status, "serviceID": s.id}, 200)
 
     def put(self, req):
         serviceID = req.data.get("serviceID", -1)
-        status = req.data.get("status", 0)
+        status = req.data.get("status", None)
         service = ServiceRequest.objects.filter(pk=int(serviceID), deleted=False).first()
-        if not service:
-            return Response({'error': 'Service request does not exist'}, status=404)
-        service.status = status
-        if int(status) == 2:  # success
-            if service.request.get_billing_count() == 0:
+        if service and status:
+            service.status = status
+            if status == "success":
                 service.request.end_request()
-        service.save()
+            service.save()
+            return Response({"status": service.status, "serviceID": service.id}, 200)
+        return Response({'error': 'Service request does not exist'}, status=404)
 
 
 class EndRequestView(APIView):
@@ -581,7 +607,7 @@ class EndRequestView(APIView):
         _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
         if not _requests:
             return Response({'error': 'Requests does not exist'}, status=404)
-        if _requests.get_billing_count() > 0:
-            return Response({'error': 'The current Request has unpaid bills'}, status=400)
-        _requests.end_request()
-        return Response({}, 200)
+        status, results = _requests.is_end()
+        if status == 200:
+            _requests.end_request()
+        return Response(results, status)

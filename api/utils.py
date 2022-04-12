@@ -64,6 +64,16 @@ def get_time_schedule(startDate, numDaysRequested, daysRequested, startTime, end
     return time_schedule
 
 
+def get_work_date(startDate, numDaysRequested, daysRequested):
+    dates = set()
+    startDate = datetime.datetime.strptime(startDate, "%Y-%m-%d")
+    for x in range(numDaysRequested):
+        _d = startDate + datetime.timedelta(x)
+        if _d.weekday() + 1 in daysRequested:
+            dates.add(_d.strftime("%Y-%m-%d"))
+    return dates
+
+
 def popItem(array, key):
     new_array = []
     pop_one = None

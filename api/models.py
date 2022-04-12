@@ -2,7 +2,29 @@ from django.db import models
 import datetime
 import random
 import hashlib
-from .utils import sent_email, is_conflict, get_time_schedule, popItem, timeFormat
+from .utils import sent_email, is_conflict, get_time_schedule, popItem, timeFormat, get_work_date
+
+billingAccountDefault = {
+    "total": 0.0,
+    "unPaidTotal": 0.0,
+    "paidTotal": 0.0,
+    "records": []
+}
+
+
+def update_billing(self, amount, pay=True):
+    if pay:
+        self.billingAccount['paidTotal'] += amount
+        self.billingAccount['unPaidTotal'] -= amount
+        self.billingAccount['records'].append({
+            "amount": amount,
+            "datetime": datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        })
+    else:
+        self.billingAccount['total'] += amount
+        self.billingAccount['unPaidTotal'] += amount
+        self.billingAccount['records'] = []
+    self.save()
 
 
 class Roles(models.Model):
@@ -141,7 +163,7 @@ class Healthcareprofessional(models.Model):
     lastName = models.CharField(db_column='lastName', max_length=50)  # Field name made lowercase.
     sex = models.CharField(max_length=1)
     ssn = models.DecimalField(db_column='SSN', max_digits=9, decimal_places=0)  # Field name made lowercase.
-    salary = models.FloatField(default=0)
+    salary = models.FloatField(default=100.0)
     typeHS = models.CharField(db_column='Type_H_S', max_length=15)  # Field name made lowercase.
     qualification = models.CharField(db_column='Qualification', max_length=10)  # Field name made lowercase.
     qualificationDate = models.DateField(db_column='Qualification_Date',
@@ -159,6 +181,7 @@ class Healthcareprofessional(models.Model):
     userID = models.ForeignKey('Users', models.CASCADE, db_column='userID', blank=True,
                                null=True)  # Field name made lowercase.
     schedule = models.JSONField(default={})
+    billingAccount = models.JSONField(default=billingAccountDefault)
     updateTime = models.DateTimeField(default=datetime.datetime.now)
     deleted = models.BooleanField(default=False)
 
@@ -169,6 +192,9 @@ class Healthcareprofessional(models.Model):
         self.deleted = True
         self.save()
 
+    def update_billing(self, amount, pay=True):
+        update_billing(self, amount, pay)
+
     def get_name(self):
         return f"{self.firstName} {self.lastName}"
 
@@ -176,10 +202,13 @@ class Healthcareprofessional(models.Model):
         schedules = []
         if self.schedule:
             for k, v in self.schedule.items():
-                for item in v:
-                    schedules.extend(
-                        get_time_schedule(item['startDate'], item['numDaysRequested'], item['daysRequested'],
-                                          item['startTime'], item['endTime'], False))
+                # todo: end
+                r = Requests.objects.filter(requestID=int(k)).first()
+                if r and not r.end:
+                    for item in v:
+                        schedules.extend(
+                            get_time_schedule(item['startDate'], item['numDaysRequested'], item['daysRequested'],
+                                              item['startTime'], item['endTime'], False))
         return schedules
 
     def has_schedule(self, requestID):
@@ -234,24 +263,14 @@ class Healthcareprofessional(models.Model):
             return 404, {"error": "schedule does not exist"}
 
     def get_salary_info(self):
-        salaryRecord = BillingAccount.objects.get(hcp=self)
         ret = {
-            "billingAccountID": salaryRecord.pk + 1000,
-            "total": salaryRecord.total,
-            "payedTotal": salaryRecord.paid,
-            "unPayedTotal": salaryRecord.unpaid,
-            "hcp": {
-                "pID": self.pID,
-                "hcpName": self.get_name()
-            },
-            "detail": []
+            "pID": self.pID,
+            "hcpName": self.get_name(),
+            "total": self.billingAccount['total'],
+            "paidTotal": self.billingAccount['paidTotal'],
+            "unPaidTotal": self.billingAccount['unPaidTotal'],
+            "payRecords": self.billingAccount['records']
         }
-        records = PayRecord.objects.filter(billingAccount=salaryRecord)
-        for record in records:
-            ret['detail'].append({
-                "amount": record.amount,
-                "paidTime": record.paidTime
-            })
         return ret
 
     class Meta:
@@ -276,10 +295,14 @@ class Requests(models.Model):
     distribution = models.JSONField(default={})
     deleted = models.BooleanField(default=False)
     updateTime = models.DateTimeField(default=datetime.datetime.now)
-    end = models.BooleanField(null=True, blank=True)
+    billingAccount = models.JSONField(default=billingAccountDefault)
+    end = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Requests({self.requestID})"
+
+    def update_billing(self, amount, pay=True):
+        update_billing(self, amount, pay)
 
     def assign(self, hcp: Healthcareprofessional, daysRequested, startTime, endTime):
         unassigned_list = self.distribution['unassigned']
@@ -312,29 +335,20 @@ class Requests(models.Model):
         self.save()
 
     def is_end(self):
-        if self.end:
-            return True
-        wcs_count = self.get_billing_count()
-        startDate = datetime.datetime.strptime(self.requirements['startDate'], "%Y-%m-%d")
-        endDate = startDate + datetime.timedelta(days=int(self.requirements['numDaysRequested']))
-        return wcs_count == 0 and datetime.datetime.now() > endDate
-
-    def get_status(self):
-        """
-        0:not start
-        1:start
-        2:end
-        """
-        startDate = datetime.datetime.strptime(self.requirements['startDate'], "%Y-%m-%d")
-        if startDate > datetime.datetime.now():
-            return 0
-        elif self.is_end():
-            return 2
-        else:
-            return 1
-
-    def get_billing_count(self):
-        return WorkRecord.objects.filter(request=self, hasPayed=False).count()
+        startDate = self.requirements['startDate']
+        numDaysRequested = self.requirements['numDaysRequested']
+        daysRequested = self.requirements['daysRequested']
+        # 1.
+        work_dates = get_work_date(startDate, numDaysRequested, daysRequested)
+        work_done_dates = {x.strftime("%Y-%m-%d") for x in
+                           WorkRecord.objects.filter(request=self).values_list('workDate', flat=True)}
+        results = list(work_dates - work_done_dates)
+        if len(results) > 0:
+            return 400, {"error": f"There are unfinished dates in the current request", "unfinishedDates": results}
+        # 2.
+        if self.billingAccount['unPaidTotal'] != 0:
+            return 400, {"error": f"There are still unpaid orders"}
+        return 200, {}
 
     def un_assign(self, hcp: Healthcareprofessional, scheduleID):
         status, results = hcp.remove_schedule(self.requestID, scheduleID)
@@ -415,15 +429,18 @@ class Requests(models.Model):
                 del hcp.schedule[str(self.requestID)]
                 hcp.save()
 
+    def delete(self, using=None, keep_parents=False):
+        self.remove_hcp_schedule()
+        super().delete()
+
     def remove(self):
         self.deleted = True
         self.remove_hcp_schedule()
         self.save()
 
     def get_billing_account(self):
-        billing = BillingAccount.objects.get(request=self)
         ret = {
-            "billingAccountID": 1000 + billing.pk,
+            "billingAccountID": 1000 + self.pk,
             "requestID": self.pk,
             "detail": [],
             'patientName': f"{self.patientFirstName} {self.patientLastName}"}
@@ -432,9 +449,9 @@ class Requests(models.Model):
                 'hcpName': assign['hcpName'],
                 'pID': int(assign['hcp']),
                 'records': [],
-                "total": billing.total,
-                'payedTotal': billing.paid,
-                'unPayedTotal': billing.total - billing.paid
+                "total": self.billingAccount['total'],
+                "paidTotal": self.billingAccount['paidTotal'],
+                "unPaidTotal": self.billingAccount['unPaidTotal'],
             }
             wcs = WorkRecord.objects.filter(hcp__pID=int(assign['hcp']), request_id=int(self.requestID))
             for wc in wcs:
@@ -489,26 +506,6 @@ class WorkRecord(models.Model):
         self.deleted = True
         self.save()
 
-    def add_billing_account(self):
-        billing = BillingAccount.objects.filter(request=self.request).first()
-        total = self.cal_amount(self.request.hourlyRate)
-        if billing:
-            billing.total += total
-            billing.unpaid += total
-        else:
-            billing = BillingAccount.objects.create(request=self.request, total=total, unpaid=total)
-        billing.save()
-
-    def add_hcp_salary(self):
-        salaryRecord = BillingAccount.objects.filter(hcp=self.hcp).first()
-        total = self.cal_amount(self.hcp.salary)
-        if salaryRecord:
-            salaryRecord.total += total
-            salaryRecord.unpaid += total
-        else:
-            salaryRecord = BillingAccount.objects.create(hcp=self.hcp, total=total, unpaid=total)
-        salaryRecord.save()
-
     class Meta:
         db_table = 'WorkRecord'
 
@@ -517,7 +514,7 @@ class ServiceRequest(models.Model):
     userTo = models.ForeignKey(Users, related_name="user_to", on_delete=models.CASCADE)
     userFrom = models.ForeignKey(Users, related_name="user_from", on_delete=models.CASCADE)
     request = models.ForeignKey(Requests, on_delete=models.CASCADE)
-    status = models.IntegerField(null=True, blank=True, help_text="0:申请,1:驳回,2:成功")
+    status = models.CharField(max_length=100)
     updateTime = models.DateTimeField(default=datetime.datetime.now)
     deleted = models.BooleanField(default=False)
 
@@ -527,41 +524,3 @@ class ServiceRequest(models.Model):
 
     class Meta:
         db_table = 'ServiceRequest'
-
-
-class BillingAccount(models.Model):
-    hcp = models.ForeignKey(Healthcareprofessional, on_delete=models.CASCADE, null=True, blank=True)
-    request = models.ForeignKey(Requests, on_delete=models.CASCADE, null=True, blank=True)
-    total = models.FloatField()
-    paid = models.FloatField(default=0)
-    unpaid = models.FloatField(default=0)
-    updateTime = models.DateTimeField(default=datetime.datetime.now)
-    deleted = models.BooleanField(default=False)
-
-    def __str__(self):
-        if self.hcp:
-            return f"Hcp Billing Record- {self.pk}"
-        else:
-            return f"Patient Billing Record- {self.pk}"
-
-    def remove(self):
-        self.deleted = True
-        self.save()
-
-    class Meta:
-        db_table = 'BillingAccount'
-
-
-class PayRecord(models.Model):
-    billingAccount = models.ForeignKey(BillingAccount, on_delete=models.CASCADE)
-    amount = models.FloatField()
-    paidTime = models.DateTimeField(default=datetime.datetime.now)
-    updateTime = models.DateTimeField(default=datetime.datetime.now)
-    deleted = models.BooleanField(default=False)
-
-    def remove(self):
-        self.deleted = True
-        self.save()
-
-    class Meta:
-        db_table = 'PayRecord'
