@@ -595,7 +595,7 @@ class ServiceRequestView(APIView):
             if status == "success" and service.request.is_pay_over():
                 service.request.end_request()
             service.save()
-            return Response({"status": service.status, "serviceID": service.id}, 200)
+            return Response({"status": service.status, "serviceID": service.serviceID}, 200)
 
         return Response({'error': 'Service request does not exist'}, status=404)
 
