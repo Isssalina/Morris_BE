@@ -478,6 +478,7 @@ class Advertise(models.Model):
     qualification = models.CharField(db_column='qualification', max_length=10)
     education = models.CharField(db_column='education', max_length=100, default="")
     yearOExp = models.IntegerField(db_column='yearOExp')
+    description = models.TextField(null=True,blank=True)
     updateTime = models.DateTimeField(default=datetime.datetime.now)
     deleted = models.BooleanField(default=False)
 
