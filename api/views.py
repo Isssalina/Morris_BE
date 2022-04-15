@@ -308,7 +308,7 @@ class RequestsView(APIView):
         serviceType = r['serviceType']
         exist = Requests.objects.filter(patientFirstName=patientFirstName, patientLastName=patientLastName,
                                         dateOfBirth=dateOfBirth, requirements__serviceType=serviceType,
-                                        deleted=False).first()
+                                        deleted=False, end=False).first()
         startDate = r['startDate']
         numDaysRequested = r['numDaysRequested']
         daysRequested = r['daysRequested']
