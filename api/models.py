@@ -512,8 +512,7 @@ class WorkRecord(models.Model):
 
 
 class ServiceRequest(models.Model):
-    userTo = models.ForeignKey(Users, related_name="user_to", on_delete=models.CASCADE)
-    userFrom = models.ForeignKey(Users, related_name="user_from", on_delete=models.CASCADE)
+    caretaker = models.ForeignKey(Caretaker, related_name="user_from", on_delete=models.CASCADE)
     request = models.ForeignKey(Requests, on_delete=models.CASCADE)
     status = models.CharField(max_length=100)
     updateTime = models.DateTimeField(default=datetime.datetime.now)

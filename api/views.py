@@ -557,33 +557,25 @@ class PayView(APIView):
 class ServiceRequestView(APIView):
     def get(self, req):
         servicesInfo = ServiceRequest.objects.filter(deleted=False)
-        userTo = req.query_params.get("userTo", None)
-        if userTo:
-            servicesInfo = servicesInfo.filter(userTo__userID=int(userTo))
-        userFrom = req.query_params.get("userFrom", None)
-        if userFrom:
-            servicesInfo = servicesInfo.filter(userFrom__userID=int(userFrom))
+        takerID = req.data.get('takerID', None)
+        if takerID:
+            servicesInfo = servicesInfo.filter(caretaker__takerID=int(takerID))
         return Response(ServiceRequestSerializer(servicesInfo, many=True).data, 200)
 
     def post(self, req):
-        userFrom = req.data.get('userFrom', None)
-        userTo = req.data.get('userTo', None)
+        takerID = req.data.get('takerID', None)
         requestID = req.data.get("requestID", None)
         _request = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
-        userFrom = Users.objects.filter(userID=int(userFrom), deleted=False).first()
-        userTo = Users.objects.filter(userID=int(userTo), deleted=False).first()
+        caretaker = Caretaker.objects.filter(takerID=int(takerID), deleted=False).first()
         if not _request:
             return Response({'error': 'Request does not exist'}, status=404)
         status, results = _request.is_end()
         if status != 200:
             return Response(results, status)
-        if not userFrom:
-            return Response({'error': 'userFrom does not exist'}, status=404)
-        if not userTo:
-            return Response({'error': 'userTo does not exist'}, status=404)
+        if not caretaker:
+            return Response({'error': 'Caretaker does not exist'}, status=404)
         s = ServiceRequest()
-        s.userFrom = userFrom
-        s.userTo = userTo
+        s.caretaker = caretaker
         s.request = _request
         s.status = "pending"
         s.save()
