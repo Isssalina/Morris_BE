@@ -571,8 +571,14 @@ class ServiceRequestView(APIView):
         requestID = req.data.get("requestID", None)
         _request = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
         caretaker = Caretaker.objects.filter(takerID=int(takerID), deleted=False).first()
-        if ServiceRequest.objects.filter(request=_request, caretaker=caretaker).first():
-            return Response({"error": "Request already sent"}, 400)
+        service = ServiceRequest.objects.filter(request=_request, caretaker=caretaker).first()
+        if service:
+            if service.status == "deny":
+                service.status = "pending"
+                service.save()
+                return Response({"status": service.status, "serviceID": ServiceRequest.objects.last().serviceID}, 200)
+            else:
+                return Response({"error": "Request is being processed"}, 400)
         if not _request:
             return Response({'error': 'Request does not exist'}, status=404)
         if not _request.is_pay_over():
