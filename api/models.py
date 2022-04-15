@@ -444,15 +444,15 @@ class Requests(models.Model):
             "billingAccountID": 1000 + self.pk,
             "requestID": self.pk,
             "detail": [],
+            "total": self.billingAccount['total'],
+            "paidTotal": self.billingAccount['paidTotal'],
+            "unPaidTotal": self.billingAccount['unPaidTotal'],
             'patientName': f"{self.patientFirstName} {self.patientLastName}"}
         for assign in self.distribution['assigned']:
             item = {
                 'hcpName': assign['hcpName'],
                 'pID': int(assign['hcp']),
                 'records': [],
-                "total": self.billingAccount['total'],
-                "paidTotal": self.billingAccount['paidTotal'],
-                "unPaidTotal": self.billingAccount['unPaidTotal'],
             }
             wcs = WorkRecord.objects.filter(hcp__pID=int(assign['hcp']), request_id=int(self.requestID))
             for wc in wcs:
