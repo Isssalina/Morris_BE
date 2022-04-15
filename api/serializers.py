@@ -62,6 +62,11 @@ class AdvertiseSerializer(serializers.ModelSerializer):
 
 
 class RequestListSerializer(serializers.ModelSerializer):
+    terminate = serializers.SerializerMethodField()
+
+    def get_terminate(self, obj):
+        status, _ = obj.is_end()
+        return status == 200
 
     class Meta:
         model = Requests
