@@ -12,7 +12,7 @@ billingAccountDefault = {
 }
 
 
-def update_billing(self, amount, pay=True):
+def update_billing(self, amount, pay):
     if pay:
         self.billingAccount['paidTotal'] += amount
         self.billingAccount['unPaidTotal'] -= amount
@@ -512,6 +512,7 @@ class WorkRecord(models.Model):
 
 
 class ServiceRequest(models.Model):
+    serviceID = models.IntegerField(db_column='serviceID', primary_key=True,default=1)
     caretaker = models.ForeignKey(Caretaker, related_name="user_from", on_delete=models.CASCADE)
     request = models.ForeignKey(Requests, on_delete=models.CASCADE)
     status = models.CharField(max_length=100)

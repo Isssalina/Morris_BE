@@ -1,4 +1,3 @@
-import datetime
 import hashlib
 from rest_framework.views import APIView
 from rest_framework.views import Response
@@ -17,6 +16,11 @@ class UnsafeSessionAuthentication(SessionAuthentication):
         if not user or not user.is_active:
             return None
         return user, None
+
+
+class ClearData(APIView):
+    def get(self, req):
+        pass
 
 
 class AuthView(APIView):
@@ -591,6 +595,7 @@ class ServiceRequestView(APIView):
                 service.request.end_request()
             service.save()
             return Response({"status": service.status, "serviceID": service.id}, 200)
+
         return Response({'error': 'Service request does not exist'}, status=404)
 
 

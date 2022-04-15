@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Caretaker, Healthcareprofessional, Requests, Roles, Securityquestions, Users, WorkRecord, Advertise
+from .models import Caretaker, Healthcareprofessional, Requests, Roles, Securityquestions, Users, WorkRecord, Advertise, \
+    ServiceRequest
 
 
 class CaretakerAdmin(admin.ModelAdmin):
@@ -26,3 +27,4 @@ admin.site.register(Securityquestions, SecurityquestionsAdmin)
 admin.site.register(Users, UsersAdmin)
 admin.site.register(WorkRecord)
 admin.site.register(Advertise)
+admin.site.register(ServiceRequest)
