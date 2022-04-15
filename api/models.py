@@ -316,7 +316,8 @@ class Requests(models.Model):
                                     daysRequested)
         for item in self.distribution['assigned']:
             s = item['schedule']
-            if s['startDate'] == r['startDate'] and s['numDaysRequested'] == r['numDaysRequested'] and \
+            if item['hcp'] == hcp.pID and s['startDate'] == r['startDate'] and s['numDaysRequested'] == r[
+                'numDaysRequested'] and \
                     (s['startTime'] == startTime and s['endTime'] == endTime):
                 s['daysRequested'].extend(daysRequested)
                 self.save()
@@ -459,7 +460,7 @@ class Requests(models.Model):
                     "workDate": wc.workDate,
                     "startTime": wc.startTime.strftime("%H:%M"),
                     "endTime": wc.endTime.strftime("%H:%M"),
-                    "amount": wc.cal_amount(self.hourlyRate)
+                    "amount": round(wc.cal_amount(self.hourlyRate), 2)
                 })
             ret['detail'].append(item)
         return ret
@@ -494,12 +495,12 @@ class WorkRecord(models.Model):
     updateTime = models.DateTimeField(default=datetime.datetime.now)
     deleted = models.BooleanField(default=False)
 
-    def cal_amount(self, hourlyRate=100.0):
+    def cal_amount(self, hourlyRate=100.00):
         endTime = timeFormat(self.endTime)
         startTime = timeFormat(self.startTime)
         duration = datetime.datetime.combine(datetime.date.today(), endTime) - datetime.datetime.combine(
             datetime.date.today(), startTime)
-        hours = round(duration.seconds / 60 / 60, 2)
+        hours = duration.seconds / 60 / 60
         return round(float(hourlyRate) * hours, 2)
 
     def remove(self):
