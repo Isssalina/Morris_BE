@@ -351,6 +351,9 @@ class Requests(models.Model):
             return 400, {"error": f"There are still unpaid orders"}
         return 200, {}
 
+    def is_pay_over(self):
+        return self.billingAccount['unPaidTotal'] == 0
+
     def un_assign(self, hcp: Healthcareprofessional, scheduleID):
         status, results = hcp.remove_schedule(self.requestID, scheduleID)
         if status != 404:
@@ -512,7 +515,7 @@ class WorkRecord(models.Model):
 
 
 class ServiceRequest(models.Model):
-    serviceID = models.IntegerField(db_column='serviceID', primary_key=True,default=1)
+    serviceID = models.IntegerField(db_column='serviceID', primary_key=True, default=1)
     caretaker = models.ForeignKey(Caretaker, related_name="user_from", on_delete=models.CASCADE)
     request = models.ForeignKey(Requests, on_delete=models.CASCADE)
     status = models.CharField(max_length=100)

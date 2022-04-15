@@ -573,7 +573,7 @@ class ServiceRequestView(APIView):
         caretaker = Caretaker.objects.filter(takerID=int(takerID), deleted=False).first()
         if not _request:
             return Response({'error': 'Request does not exist'}, status=404)
-        status, results = _request.is_end()
+        status, results = _request.is_pay_over()
         if status != 200:
             return Response(results, status)
         if not caretaker:
@@ -591,7 +591,7 @@ class ServiceRequestView(APIView):
         service = ServiceRequest.objects.filter(pk=int(serviceID), deleted=False).first()
         if service and status:
             service.status = status
-            if status == "success":
+            if status == "success" and service.request.is_pay_over():
                 service.request.end_request()
             service.save()
             return Response({"status": service.status, "serviceID": service.id}, 200)
@@ -604,7 +604,7 @@ class EndRequestView(APIView):
         _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
         if not _requests:
             return Response({'error': 'Requests does not exist'}, status=404)
-        status, results = _requests.is_end()
+        status, results = _requests.is_pay_over()
         if status == 200:
             _requests.end_request()
         return Response(results, status)
