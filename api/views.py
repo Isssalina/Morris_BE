@@ -577,6 +577,8 @@ class ServiceRequestView(APIView):
                 service.status = "pending"
                 service.save()
                 return Response({"status": service.status, "serviceID": ServiceRequest.objects.last().serviceID}, 200)
+            elif service.status == "success":
+                return Response({"error": "Request is end"}, 400)
             else:
                 return Response({"error": "Request is being processed"}, 400)
         if not _request:
