@@ -613,7 +613,7 @@ class EndRequestView(APIView):
         _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
         if not _requests:
             return Response({'error': 'Requests does not exist'}, status=404)
-        status, results = _requests.is_pay_over()
-        if status == 200:
+        if _requests.is_pay_over():
             _requests.end_request()
-        return Response(results, status)
+            return Response({}, 200)
+        return Response({"error": "There are still unpaid orders"}, 400)
