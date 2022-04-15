@@ -571,11 +571,12 @@ class ServiceRequestView(APIView):
         requestID = req.data.get("requestID", None)
         _request = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
         caretaker = Caretaker.objects.filter(takerID=int(takerID), deleted=False).first()
+        if ServiceRequest.objects.filter(request=_request, caretaker=caretaker).first():
+            return Response({"error": "Request already sent"}, 400)
         if not _request:
             return Response({'error': 'Request does not exist'}, status=404)
-        status, results = _request.is_pay_over()
-        if status != 200:
-            return Response(results, status)
+        if not _request.is_pay_over():
+            return 400, {"error": f"There are still unpaid orders"}
         if not caretaker:
             return Response({'error': 'Caretaker does not exist'}, status=404)
         s = ServiceRequest()
@@ -583,7 +584,7 @@ class ServiceRequestView(APIView):
         s.request = _request
         s.status = "pending"
         s.save()
-        return Response({"status": s.status, "serviceID": s.id}, 200)
+        return Response({"status": s.status, "serviceID": ServiceRequest.objects.last().serviceID}, 200)
 
     def put(self, req):
         serviceID = req.data.get("serviceID", -1)

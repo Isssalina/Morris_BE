@@ -515,8 +515,8 @@ class WorkRecord(models.Model):
 
 
 class ServiceRequest(models.Model):
-    serviceID = models.IntegerField(db_column='serviceID', primary_key=True, default=1)
-    caretaker = models.ForeignKey(Caretaker, related_name="user_from", on_delete=models.CASCADE)
+    serviceID = models.IntegerField(db_column='serviceID', primary_key=True)
+    caretaker = models.ForeignKey(Caretaker, on_delete=models.CASCADE)
     request = models.ForeignKey(Requests, on_delete=models.CASCADE)
     status = models.CharField(max_length=100)
     updateTime = models.DateTimeField(default=datetime.datetime.now)
