@@ -589,7 +589,7 @@ class ServiceRequestView(APIView):
     def put(self, req):
         serviceID = req.data.get("serviceID", -1)
         status = req.data.get("status", None)
-        service = ServiceRequest.objects.filter(pk=int(serviceID), deleted=False).first()
+        service = ServiceRequest.objects.filter(serviceID=int(serviceID), deleted=False).first()
         if service and status:
             service.status = status
             if status == "success" and service.request.is_pay_over():
