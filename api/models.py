@@ -30,7 +30,7 @@ def update_billing(self, amount, pay):
 class Roles(models.Model):
     roleID = models.AutoField(db_column='roleID', primary_key=True)  # Field name made lowercase.
     roleName = models.CharField(db_column='roleName', max_length=30)  # Field name made lowercase.
-    updateTime = models.DateTimeField(default=datetime.datetime.now)
+    updateTime = models.DateTimeField(auto_now=True)
     deleted = models.BooleanField(default=False)
 
     def remove(self):
@@ -45,7 +45,7 @@ class Securityquestions(models.Model):
     securityQuestionID = models.AutoField(db_column='securityQuestionID',
                                           primary_key=True)  # Field name made lowercase.
     question = models.CharField(max_length=255)
-    updateTime = models.DateTimeField(default=datetime.datetime.now)
+    updateTime = models.DateTimeField(auto_now=True)
     deleted = models.BooleanField(default=False)
 
     def remove(self):
@@ -85,7 +85,7 @@ class Users(models.Model):
                                                 db_column='securityQuestionThreeID')  # Field name made lowercase.
     securityQuestionThreeAnswer = models.CharField(db_column='securityQuestionThreeAnswer', blank=True, null=True,
                                                    max_length=30)  # Field name made lowercase.
-    updateTime = models.DateTimeField(default=datetime.datetime.now)
+    updateTime = models.DateTimeField(auto_now=True)
     deleted = models.BooleanField(default=False)
 
     def gen_password(self):
@@ -146,7 +146,7 @@ class Caretaker(models.Model):
     enroll = models.BooleanField(blank=True, null=True, default=False)
     userID = models.ForeignKey('Users', models.CASCADE, db_column='userID', blank=True,
                                null=True)
-    updateTime = models.DateTimeField(default=datetime.datetime.now)
+    updateTime = models.DateTimeField(auto_now=True)
     deleted = models.BooleanField(default=False)
 
     def remove(self):
@@ -182,7 +182,7 @@ class Healthcareprofessional(models.Model):
                                null=True)  # Field name made lowercase.
     schedule = models.JSONField(default={})
     billingAccount = models.JSONField(default=billingAccountDefault)
-    updateTime = models.DateTimeField(default=datetime.datetime.now)
+    updateTime = models.DateTimeField(auto_now=True)
     deleted = models.BooleanField(default=False)
 
     def age(self):
@@ -294,7 +294,7 @@ class Requests(models.Model):
     requirements = models.JSONField(default={})
     distribution = models.JSONField(default={})
     deleted = models.BooleanField(default=False)
-    updateTime = models.DateTimeField(default=datetime.datetime.now)
+    updateTime = models.DateTimeField(auto_now=True)
     billingAccount = models.JSONField(default=billingAccountDefault)
     end = models.BooleanField(default=False)
 
@@ -479,7 +479,7 @@ class Advertise(models.Model):
     education = models.CharField(db_column='education', max_length=100, default="")
     yearOExp = models.IntegerField(db_column='yearOExp')
     description = models.TextField(null=True,blank=True)
-    updateTime = models.DateTimeField(default=datetime.datetime.now)
+    updateTime = models.DateTimeField(auto_now=True)
     deleted = models.BooleanField(default=False)
 
     def remove(self):
@@ -496,7 +496,7 @@ class WorkRecord(models.Model):
     workDate = models.DateField()
     startTime = models.TimeField()
     endTime = models.TimeField()
-    updateTime = models.DateTimeField(default=datetime.datetime.now)
+    updateTime = models.DateTimeField(auto_now=True)
     deleted = models.BooleanField(default=False)
 
     def cal_amount(self, hourlyRate=100.00):
@@ -520,7 +520,7 @@ class ServiceRequest(models.Model):
     caretaker = models.ForeignKey(Caretaker, on_delete=models.CASCADE)
     request = models.ForeignKey(Requests, on_delete=models.CASCADE)
     status = models.CharField(max_length=100)
-    updateTime = models.DateTimeField(default=datetime.datetime.now)
+    updateTime = models.DateTimeField(auto_now=True)
     deleted = models.BooleanField(default=False)
 
     def remove(self):
