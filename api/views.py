@@ -326,7 +326,7 @@ class RequestsView(APIView):
             if k == "userID":
                 v = Users.objects.filter(userID=int(v), deleted=False).first()
                 if not v:
-                    return Response({"error": "User does not exist"}, status=200)
+                    return Response({"error": "User does not exist"}, status=404)
             setattr(h_request, k, v)
         h_request.distribution = {
             "assigned": [],
