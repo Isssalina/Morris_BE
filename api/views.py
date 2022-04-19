@@ -400,16 +400,18 @@ class UnAssignRequestView(APIView):
         requestID = req.data.get("requestID")
         pID = req.data.get('pID')
         scheduleID = req.data.get('scheduleID')
-        _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
+        _request = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
         hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
-        if not _requests:
+        if WorkRecord.objects.filter(request=_request, hcp=hcp).first():
+            return Response({'error': 'There are work records in the current HCP'}, status=404)
+        if not _request:
             return Response({'error': 'Requests does not exist'}, status=404)
         if not hcp:
             return Response({'error': 'Hcp does not exist'}, status=404)
         if not hcp.enroll:
             return Response({'error': 'The current hcp is not enrolled'}, status=400)
 
-        status, results = _requests.un_assign(hcp, scheduleID)
+        status, results = _request.un_assign(hcp, scheduleID)
         return Response(results, status=status)
 
 
