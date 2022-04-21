@@ -9,6 +9,16 @@ from rest_framework.authentication import SessionAuthentication
 from .utils import is_conflict, get_time_schedule
 
 
+def check_reqeust_available(request):
+    if request.end:
+        return {"error": "The current request has ended"}, 400
+    service = ServiceRequest.objects.filter(request=request).first()
+    if service:
+        if service.status == 'pending':
+            return {"error": "The current request is ending"}, 400
+    return {}, 200
+
+
 class UnsafeSessionAuthentication(SessionAuthentication):
     def authenticate(self, request):
         http_request = request._request
@@ -370,16 +380,19 @@ class AssignRequestView(APIView):
     def post(self, req):
         requestID = req.data.get("requestID")
         pID = req.data.get('pID')
-        _requests = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
+        _request = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
         hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
-        if not _requests:
+        if not _request:
             return Response({'error': 'Requests does not exist'}, status=404)
+        results, status = check_reqeust_available(_request)
+        if status != 200:
+            return Response(results, status=status)
         if not hcp:
             return Response({'error': 'Hcp does not exist'}, status=404)
         if not hcp.enroll:
             return Response({'error': 'The current hcp is not enrolled'}, status=400)
         daysRequested = req.data.get("daysRequested")
-        r = _requests.requirements
+        r = _request.requirements
         flexibleTime = r['flexibleTime'] if 'flexibleTime' in r else False
         if flexibleTime:
             startTime = req.data.get("startTime")
@@ -389,7 +402,7 @@ class AssignRequestView(APIView):
         else:
             startTime = r['startTime']
             endTime = r['endTime']
-        status, results = _requests.assign(hcp, daysRequested, startTime, endTime)
+        status, results = _request.assign(hcp, daysRequested, startTime, endTime)
         return Response(results, status=status)
 
 
@@ -406,6 +419,9 @@ class UnAssignRequestView(APIView):
             return Response({'error': 'There are work records in the current HCP'}, status=404)
         if not _request:
             return Response({'error': 'Requests does not exist'}, status=404)
+        results, status = check_reqeust_available(_request)
+        if status != 200:
+            return Response(results, status=status)
         if not hcp:
             return Response({'error': 'Hcp does not exist'}, status=404)
         if not hcp.enroll:
@@ -424,6 +440,9 @@ class AvailableHcpView(APIView):
         endTime = req.data.get("endTime", None)
         daysRequested = req.data.get("daysRequested", None)
         if _request:
+            results, status = check_reqeust_available(_request)
+            if status != 200:
+                return Response(results, status=status)
             return Response(
                 data=HcpSerializer(_request.get_available_hcp(startTime, endTime, daysRequested), many=True).data)
         return Response({"error": "requests does not exist"}, 404)
@@ -461,6 +480,9 @@ class WorkView(APIView):
         hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
         if not _request:
             return Response({'error': 'Requests does not exist'}, status=404)
+        results, status = check_reqeust_available(_request)
+        if status != 200:
+            return Response(results, status=status)
         if not hcp:
             return Response({'error': 'Hcp does not exist'}, status=404)
         if not hcp.enroll:
@@ -543,6 +565,9 @@ class PayView(APIView):
         _request = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
         if not _request:
             return Response({'error': 'Request does not exist'}, status=404)
+        results, status = check_reqeust_available(_request)
+        if status != 200:
+            return Response(results, status=status)
         amount = req.data.get("amount", None)
         if amount:
             if amount <= 0:
