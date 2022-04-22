@@ -415,8 +415,6 @@ class UnAssignRequestView(APIView):
         scheduleID = req.data.get('scheduleID')
         _request = Requests.objects.filter(requestID=int(requestID), deleted=False).first()
         hcp = Healthcareprofessional.objects.filter(pID=int(pID), deleted=False).first()
-        if WorkRecord.objects.filter(request=_request, hcp=hcp).first():
-            return Response({'error': 'There are work records in the current HCP'}, status=404)
         if not _request:
             return Response({'error': 'Requests does not exist'}, status=404)
         results, status = check_reqeust_available(_request)
