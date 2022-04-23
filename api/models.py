@@ -421,8 +421,8 @@ class Requests(models.Model):
         for hcp in hcp_list:
             hcp_schedule = hcp.get_all_schedule()
             available = not is_conflict(hcp_schedule, current_schedule)
-            hcp.schedule['available'] = available and self.check_requirements(hcp, requirements)
-            required_hcp_list.append(hcp)
+            if  available and self.check_requirements(hcp, requirements):
+                required_hcp_list.append(hcp)
 
         return required_hcp_list
 
